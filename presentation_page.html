@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mon site</title>
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/> -->
+  <link rel="stylesheet" href="style_presentation.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div class="back-to-top">
+            <a href="index.html" onclick="window.scrollTo({top: 0, behavior: 'smooth'})"><i class="fas fa-angle-left"></i> <span><</span></a>
+        </div>
+        
+        <div class="container">
+            <div class="banner">
+                <input type="checkbox" id="checkbox">
+                    <script>
+                        var check = document.getElementById("checkbox");
+        
+                        check.onclick = () => {
+                            document.querySelector("body").classList.toggle("active");
+                            document.querySelector(".banner").classList.toggle("active");
+                            document.querySelector(".content").classList.toggle("active");
+                            document.querySelector(".footer").classList.toggle("active");
+                            document.querySelector("h1").classList.toggle("active");
+                            document.querySelector("p").classList.toggle("active");
+                            document.querySelector(".button").classList.toggle("active");
+                            document.querySelector(".image").classList.toggle("active");
+                            document.querySelector(".text").classList.toggle("active");
+                            document.querySelector(".section").classList.toggle("active");
+                            document.querySelector(".section2").classList.toggle("active");
+                            document.querySelector(".section3").classList.toggle("active");
+                            document.querySelector(".section4").classList.toggle("active");
+                            document.querySelector(".example").classList.toggle("active");
+                            document.querySelector(".back-to-top").classList.toggle("active");
+                            document.getElementById("para").classList.toggle("active");
+                            document.getElementById("titres_icon").classList.toggle("active");
+                            document.getElementById("titres_icon1").classList.toggle("active");
+                            document.getElementById("titres_icon2").classList.toggle("active");
+                            document.getElementById("titres_icon3").classList.toggle("active");
+                            document.getElementById("icon1").classList.toggle("active");
+                            document.getElementById("icon2").classList.toggle("active");
+                            document.getElementById("icon3").classList.toggle("active");
+                            document.getElementById("icon4").classList.toggle("active");
+                            document.querySelector("example-section").classList.toggle("active");
+                        }
+                    </script>
+                
+                <div class="text">
+                    <h1>Romaric - Programmeur</h1>
+                    <p>Innovation | Créativité | Rigueur</p>
+                    <p id="para">Je suis un jeune programmeur passionné avec des compétences diverses en informatique. Je crée des jeux vidéo ainsi que des petits programmes à mes heures perdues. Explorez mon GitHub ainsi que mon Replit pour voir mes compétences en action.</p>
+                    <!-- <a href="#" class="button">Explore plus</a> -->
+                </div>
+                <div class="image" class="tilt-in-fwd-tr">
+                    <img src="resources/logo_affiche.jpg" alt="Banner Romaric">
+                </div>
+            </div>
+            <div class="content">
+                <div class="section">
+                    <div class="icon" style="animation-delay: 0s;">
+                        <img src="resources/cv.svg" alt="cv">
+                    </div>
+                    <div class="text">
+                        <h2 id="titres_icon">Qui suis-je?</h2>
+                        <p id="icon1">Découvrez mon parcours professionnel ainsi que mes compétences plus en détail dans mon cv.</p>
+                    </div>
+                    <a href="resources/cv.pdf" class="button">Consultez mon CV</a>
+                </div>
+                <div class="section2">
+                    <div class="icon" style="animation-delay: 0.2s;">
+                        <img src="resources/diploma-verified.svg" alt="univp8">
+                    </div>
+                    <div class="text">
+                        <h2 id="titres_icon1">Mon diplôme</h2>
+                        <p id="icon2">Consultez le site de ma license à l'université de Paris 8.</p>
+                    </div>
+                    <a href="https://informatique.up8.edu/licence-iv/" class="button">Site de ma licence</a>
+                </div>
+                <div class="section3">
+                    <div class="icon" style="animation-delay: 0.4s;">
+                        <img src="resources/github.svg" alt="github">
+                    </div>
+                    <div class="text">
+                        <h2 id="titres_icon2">Mon Github</h2>
+                        <p id="icon3">Découvrez les différents projets que j'ai pu réaliser jusqu'à aujourd'hui.</p>
+                    </div>
+                    <a href="https://github.com/rosignol08" class="button">Mon Github</a>
+                </div>
+                <div class="section4">
+                    <div class="icon" style="animation-delay: 0.6s;">
+                        <img src="resources/New_Replit_Logo.png" alt="replit">
+                    </div>
+                    <div class="text">
+                        <h2 id="titres_icon3">Mon Replit</h2>
+                        <p id="icon4">Découvrez ici les programmes que j'ai réalisés de manière plus générale.</p>
+                    </div>
+                    <a href="https://replit.com/@RomaricChaffray" class="button">Mon replit</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- la je met le script pour les exemple cool -->
+     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var examples = document.querySelectorAll('.example');
+        
+            function checkVisibility() {
+                examples.forEach(function(example) {
+                    var rect = example.getBoundingClientRect();
+                    var isVisible = (rect.top >= 0) && (rect.bottom <= window.innerHeight);
+                    if (isVisible) {
+                        example.classList.add('visible');
+                        example.classList.remove('hidden');
+                    } else {
+                        example.classList.add('hidden');
+                        example.classList.remove('visible');
+                    }
+                });
+            }
+        
+            checkVisibility();
+            window.addEventListener('scroll', checkVisibility);
+        });
+        
+          
+
+     </script>
+      
+    <section class="example-section">
+        <div class="example">
+          <div class="example-image">
+            <!-- <img src="path/to/image1.jpg" alt="Example Image 1"> -->
+            <p>J'ai des compétences de programmation en divers langages comme le C. Vous pouvez consulter un exemple <a href="https://github.com/rosignol08/recherche_occurence_en_C">ici</a>.</p>
+          </div>
+          <div class="example-description">
+            <h3>Exemple de Code</h3>
+            <pre><code>
+                int main() {
+                    printf("Hello, World!\n");
+                    return 0;
+                }
+                </code></pre>
+          </div>
+        </div>
+        <div class="example">
+          <div class="example-description">
+            <h3>Exemple de Code (encore)</h3>
+            <pre><code>
+                int main() {
+                    std::cout << "Hello, World!";
+                    return 0;
+                }
+            </code></pre>
+          </div>
+            <div class="example-image">
+                <p>Ainsi que le C++, consultable <a href="https://github.com/rosignol08/ecosyst-me-cpp">ici</a> également.</p>
+                <!-- <img src="path/to/image1.jpg" alt="Example Image 2"> -->
+            </div>
+        </div>
+        <div class="example">
+            <div class="example-image">
+              <!-- <img src="path/to/image1.jpg" alt="Example Image 1"> -->
+              <p>Dans le cadre d’un concours universitaire, j’ai eu l’occasion de faire un jeu vidéo que j’ai publié sur ma page <a href="https://rosignol.itch.io/">itch</a> afin d’améliorer mes compétences dans le domaine.</p>
+            </div>
+            <div class="example-description">
+              <h3>Création d'un jeu</h3>
+            <img src="resources/img_jeu_1.png" alt="Example Image 1" style="width: 50%; height: auto;">
+              
+            </div>
+          </div>
+        <!-- Add more examples as needed -->
+    </section>
+    <div class="footer">
+        <div class="social">
+            <a href="https://www.linkedin.com/in/romaric-chaffray-990100269/"><img src="resources/logo_in.png" alt="linkedin"></a>
+            <!-- <a href="#"><img src="gmail.png" alt="Gmail"></a> -->
+            <a href="https://www.instagram.com/rc._.08/"><img src="resources/logo_insta.png" alt="Instagram"></a>
+        </div>
+        <div class="info">
+            <p>rchaffray@gmail.com</p>
+            <p>75020, Paris France</p>
+            <p>+33 6 13 54 16 48</p>
+        </div>
+    </div>
+</body>
+</html>

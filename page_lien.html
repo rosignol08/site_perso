@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ma Page Personnelle</title>
+  <link rel="stylesheet" href="style2.css">
+</head>
+<body>
+  <header class="header">
+    <nav class="menu">
+      <button class="menu-btn">Menu</button>
+      <div class="menu-content">
+        <a href="#">Heure</a>
+        <a href="#">Météo</a>
+        <a href="index.html" id="themeOption">Retour</a>
+      </div>
+    </nav>
+    <div class="time">
+      <span id="current-time"></span>
+    </div>
+    <button id="themeToggle">Changer de thème</button>
+  </header>
+    <main class="content">
+      <!-- Rubrique 1 -->
+      <div class="box">
+        <h2>Communication</h2>
+        <ul>
+          <li><a href="https://discord.com/channels/@me"> Discord</a></li>
+          <li><a href="https://talk.up8.edu/licence-iv-2023-2024/channels/l2-x"> Mattermost</a></li>
+          <li><a href="https://zimbra.univ-paris8.fr/mail#1"> Zimbra</a></li>
+        </ul>
+      </div>
+      <!-- Rubrique 2 -->
+      <div class="box">
+        <h2>Majeures</h2>
+        <ul>
+          <li><a href="https://defelice.up8.site/poo.html"> Programmation orientée objet</a></li>
+          <li><a href="https://moodle.univ-paris8.fr/course/view.php?id=13696"> Algorithmique</a></li>
+          <li><a href="https://wintershammer.github.io/teaching/sysRes/sysRes/"> Systèmes et réseaux</a></li>
+        </ul>
+      </div>
+      <!-- Rubrique 3 -->
+      <div class="box">
+        <h2>Mineures</h2>
+        <ul>
+          <li><a href="https://expreg.org/amsi/C/SIAS2324S2/">API8</a></li>
+          <li><a href="https://defelice.up8.site/mathsInfoL2.html">Mathématiques</a></li>
+          <li><a href="https://pablo.rauzy.name/teaching/hi/">Histoire de l'informatique</a></li>
+        </ul>
+      </div>
+      <!-- Rubrique 4 -->
+      <div class="box">
+        <h2>Temps</h2>
+        <ul>
+          <li><a href="https://informatique.up8.edu/licence-iv/edt/l3-b.html">Emplois du temps</a></li>
+          <li><a href="https://e-p8.univ-paris8.fr/uPortal/f/u64l1s16/p/NotesEtResultats.u64l1n1650/max/render.uP?pCp">Notes</a></li>
+        </ul>
+      </div>
+      <!-- Rubrique 5 -->
+      <div class="box">
+        <h2>Musique</h2>
+        <ul>
+          <li>Spotify</li>
+          <li>YouTube</li>
+        </ul>
+      </div>
+      <!-- Rubrique 6 -->
+      <div class="box">
+        <h2>Code</h2>
+        <ul>
+          <li><a href="https://replit.com/~">Replit</a></li>
+        </ul>
+      </div>
+    </main>
+    
+    <script src="js/script2.js"></script>
+    <script>
+      function updateTime() {
+        var currentTime = new Date();
+        var hours = currentTime.getHours();
+        var minutes = currentTime.getMinutes();
+        
+        // Ajout d'un zéro devant les chiffres de moins de 10
+        hours = (hours < 10) ? "0" + hours : hours;
+        minutes = (minutes < 10) ? "0" + minutes : minutes;
+        
+        var timeString = hours + ":" + minutes;
+        document.getElementById('current-time').textContent = timeString;
+      }
+    
+      setInterval(updateTime, 1000);
+    </script>
+    
+  </div>
+</body>
+</html>

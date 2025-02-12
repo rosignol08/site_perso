@@ -1,0 +1,384 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;300;400;800&display=swap');
+
+*, *::before, *::after{
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+body{
+  font-family: "Poppins", sans-serif;
+  background-color: #353;
+}
+
+::selection{
+  background-color: #0b372dbb;
+}
+
+.logo{
+  width: 100px;
+}
+
+.header {
+  position: absolute;
+  z-index: 9999;
+  width: 100%;
+  padding: 0.9rem 0;
+  top: 0;
+  left: 0;
+  border-bottom: 1px solid rgba(114, 114, 114, 0);
+  background-color: none;
+  backdrop-filter: blur(10px); /* Effet de flou */
+  -webkit-backdrop-filter: blur(10px); /* Effet de flou pour les navigateurs WebKit */
+}
+
+
+header nav{
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  justify-content: space-between;
+  left: 5%;
+  align-items: center;
+  backdrop-filter: blur(10px); /* Effet de flou */
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.time {
+  font-size: 4vh;
+  color: aliceblue;
+}
+
+header ul{
+  display: flex;
+  list-style: none;
+  align-items: center;
+  background-color: none;
+  backdrop-filter: blur(10px); /* Effet de flou */
+  -webkit-backdrop-filter: blur(10px); /* Effet de flou pour les navigateurs WebKit */
+}
+
+header ul a{
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.63);
+  padding: 0 1.5rem;
+  text-transform: uppercase;
+  font-weight: 300;
+  font-size: 0.83rem;
+}
+
+.searsh a{
+  font-size: 1.05rem;
+  padding: 0 3rem;
+}
+
+.hamburger{
+  padding-left: 1.5rem;
+}
+.hamburger a{
+  padding: 0;
+  width: 37px;
+  height: 37px;
+  display: flex;
+  border-radius: 50%;
+  background-color: rgba(115, 115, 115, 0.17);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  justify-content: center;
+  align-items: center;
+}
+
+.hamburger .bar{
+  position: relative;
+  width: 52%;
+  height: 1.3px;
+  background-color: #fff;
+  border-radius: 2px;
+}
+
+.hamburger .bar::before,
+.hamburger .bar::after{
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%);
+  width: 60%;
+  height: 100%;
+  background-color: inherit;
+  border-radius: 2px;
+}
+
+.hamburger .bar::before{
+  top: -4.5px; 
+}
+
+.hamburger .bar::after{
+  top: 4.5px; 
+}
+
+footer {
+  background-color: #353; /* Changer la couleur ici */
+}
+
+main{
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.text a {
+  text-decoration: none;
+  color: inherit; /* Hérite de la couleur du texte parent */
+}
+
+.paralax{
+  pointer-events: none;
+  transition: 0.45s cubic-bezier(0.2, 0.49,0.32,0.99);
+}
+
+.bg-img {
+  position: absolute;
+  width: 110%;
+  top: 90%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.mountain1 {
+  position: absolute;
+  width: 15.46%;
+  top: 95.83%;
+  /*left: calc(62.5% + 36.46%);*/
+  left: 20%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.fog1 {
+  position: absolute;
+  width: 52.08%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+.mountain2 {
+  position: absolute;
+  width: 7.46%;
+  top: calc(64.58% - 12.5vh);
+  left: calc(20% - 61.46%);
+  transform: translate(-50%, -50%);
+  z-index: 4;
+}
+
+.text {
+  position: absolute;
+  z-index: 5;
+  top: calc(38%);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  text-transform: uppercase;
+  pointer-events: auto;
+  color: #fff;
+}
+
+.text h2 {
+  font-weight: 100;
+  font-size: 6.5rem;
+  line-height: 0.88;
+}
+
+.text.paralax h1 {
+  position: relative; /* Ajouter cette ligne */
+  font-weight: 800;
+  font-size: 8rem;
+  line-height: 0.88;
+  text-align: center; /* Ajouter cette ligne */
+}
+
+
+.text.paralax h1::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /*background-color: rgba(0, 0, 0, 0.5); Ajuster la couleur et l'opacité selon vos besoins */
+  backdrop-filter: blur(10px);
+  z-index: -1; /* Placer l'élément derrière le texte */
+  border-radius: 30px;
+  
+}
+
+.texte-entree {
+  transition: transform 0.3s ease-out;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.texte-entree:hover {
+  transform: scale(1.1) rotate(5deg); /* Aggrandit et fait pivoter le texte lors du survol */
+} 
+
+.mountain3 {
+  position: absolute;
+  width: 15.25%;
+  top: 85%;
+  left: 5%;
+  transform: translate(-50%, -50%);
+  z-index: 14;
+}
+
+.mountain4 {
+  position: absolute;
+  width: 30.25%;
+  top: 75%;
+  left: 105%;
+  transform: translate(-50%, -50%);
+  z-index: 7;
+}
+
+.mountain5 {
+  position: absolute;
+  width: 10.25%;
+  top: 85%;
+  left: 55%;
+  transform: translate(-50%, -50%);
+  z-index: 8;
+}
+
+.mountain6 {
+  position: absolute;
+  width: 10.04%;
+  top: 90%;
+  left: 65%;
+  transform: translate(-50%, -50%);
+  z-index: 9;
+}
+
+.mountain7 {
+  position: absolute;
+  width: 10%;
+  top: 85%;
+  left: 33%;
+  transform: translate(-50%, -50%);
+  z-index: 12;
+}
+
+.mountain8 {
+  position: absolute;
+  width: 12.04%;
+  top: 85%;
+  left: 44%;
+  transform: translate(-50%, -50%);
+  z-index: 11;
+}
+
+.fog2 {
+  position: absolute;
+  width: 52.08%;
+  top: 80%;
+  left: 78%;
+  transform: translate(-50%, -50%);
+  z-index: 12;
+}
+
+.mountain9 {
+  position: absolute;
+  width: 12.81%;
+  top: 85%;
+  left: 80%;
+  transform: translate(-50%, -50%);
+  z-index: 13;
+}
+
+.mountain10 {
+  position: absolute;
+  width: 12.63%;
+  top: 70%;
+  left: 5%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+}
+/*
+.sun-rays {
+  position: absolute;
+  z-index: 15;
+  top: 0;
+  right: 0;
+  width: 31.05%;
+  pointer-events: none;
+}
+*/
+
+.black-shadow{
+  position: absolute;
+  z-index: 16;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.vignette {
+  position: absolute;
+  z-index: 100;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 65%, rgba(0, 0, 0, 0.7));
+  pointer-events: none;
+}
+
+@media (max-width: 1100px){
+  .text h1{
+    font-size: 5.8rem;
+  }
+
+  .text h2{
+    font-size: 4.7;
+  }
+}
+
+@media (max-width: 725){
+  .text h1{
+    font-size: 5rem;
+    line-height: 1.1;
+  }
+
+  .text h2{
+    font-size: 4.1;
+    line-height: 1.1;
+  }
+  header nav{
+    padding: 0 1rem;
+  }
+
+  .logo{
+    width: 75px;
+  }
+
+  header ul a{
+    font-size: 0.73rem;
+    padding: 0 0.9rem;
+  }
+
+  .searsh a{
+    font-size: 0.85rem;
+    padding: 0 1.8rem;
+  }
+  .hamburger{
+    padding-left: 0.9rem;
+  }
+
+  .hamburger a{
+    height: 30px;
+    width: 30px;
+  }
+}
