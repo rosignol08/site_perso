@@ -19,10 +19,10 @@ renderer.toneMappingExposure = 0.3;
 //scene.background = new THREE.Color(0x000000);
 //scene.background = 0x0000ff;
 //renderer.setClearColor( 0x000000, 1);
-scene.background = new THREE.Color('#CFCFCF');
+scene.background = new THREE.Color('#c7c7c7');
 
 // Ajout du brouillard à la scène
-const fogColor =new THREE.Color('#CFCFCF');// Couleur du brouillard
+const fogColor =new THREE.Color('#c7c7c7');// Couleur du brouillard
 //scene.fog = new THREE.Fog(fogColor, 1, 1000);
 
 // Ajout de brouillard exponentiel
@@ -268,30 +268,37 @@ rightArrow.addEventListener("click", () => changeText(1));
 let isAnimating = false; // Variable pour suivre l'état de l'animation
 
 function changeText(direction) {
-  //if (isAnimating) return; // Ne fait rien si une animation est déjà en cours
+  if (isAnimating) {
+    // Si une animation est en cours, la coupe et passe directement à la nouvelle animation
+    textElement.classList.remove("smoke-out", "smoke-in");
+  }
 
   let newIndex = currentIndex + direction;
 
   // Vérifie si on dépasse les limites
-  //if (newIndex < 0 || newIndex > 2) {
-  //  return; // Ne fait rien si on est déjà au bout
-  //}
+  if (newIndex < 0 || newIndex > 2) {
+    return; // Ne fait rien si on est déjà au bout
+  }
+  // Désactiver les flèches pendant l'animation
+  leftArrow.style.pointerEvents = "none";
+  rightArrow.style.pointerEvents = "none";
 
   textElement.classList.add("smoke-out"); // Ajoute l'animation de disparition
 
   isAnimating = true; // Début de l'animation
-  //textElement.style.opacity = "0"; // Disparition douce
 
   setTimeout(() => {
     currentIndex = newIndex; // Met à jour l'index seulement si valide
     textElement.textContent = texts[currentIndex];
     textElement.classList.remove("smoke-out"); // Supprime l'ancienne animation
     textElement.classList.add("smoke-in"); // Ajoute l'animation d'apparition
-    //textElement.style.opacity = "1"; // Réapparition
 
     setTimeout(() => {
-      //isAnimating = false; // Fin de l'animation
+      isAnimating = false; // Fin de l'animation
       textElement.classList.remove("smoke-in"); // Nettoie après animation
+      // Réactiver les flèches après l'animation
+      leftArrow.style.pointerEvents = "auto";
+      rightArrow.style.pointerEvents = "auto";
     }, 500); // Durée de l'animation CSS
   }, 500); // Attend la fin de l'animation avant de changer le texte
 }
