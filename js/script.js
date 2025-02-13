@@ -194,6 +194,14 @@ function rotateCamera(direction) {
   } else if (direction === 'right') {
     targetAngle -= angleIncrement;
   }
+
+  // Limiter l'angle de rotation entre -90 degrés et 90 degrés
+  const maxAngle = Math.PI / 2;
+  if (targetAngle > maxAngle) {
+    targetAngle = maxAngle;
+  } else if (targetAngle < -maxAngle) {
+    targetAngle = -maxAngle;
+  }
 }
 
 // Ajout des flèches pour tourner la caméra
@@ -257,21 +265,35 @@ textElement.textContent = texts[currentIndex]; // Afficher le texte de départ
 leftArrow.addEventListener("click", () => changeText(-1));
 rightArrow.addEventListener("click", () => changeText(1));
 
+let isAnimating = false; // Variable pour suivre l'état de l'animation
+
 function changeText(direction) {
+  //if (isAnimating) return; // Ne fait rien si une animation est déjà en cours
+
   let newIndex = currentIndex + direction;
 
   // Vérifie si on dépasse les limites
-  if (newIndex < 0 || newIndex > 2) {
-    return; // Ne fait rien si on est déjà au bout
-  }
+  //if (newIndex < 0 || newIndex > 2) {
+  //  return; // Ne fait rien si on est déjà au bout
+  //}
 
-  textElement.style.opacity = "0"; // Disparition douce
+  textElement.classList.add("smoke-out"); // Ajoute l'animation de disparition
+
+  isAnimating = true; // Début de l'animation
+  //textElement.style.opacity = "0"; // Disparition douce
 
   setTimeout(() => {
     currentIndex = newIndex; // Met à jour l'index seulement si valide
     textElement.textContent = texts[currentIndex];
-    textElement.style.opacity = "1"; // Réapparition
-  }, 100); // Attend la fin de l'animation avant de changer le texte
+    textElement.classList.remove("smoke-out"); // Supprime l'ancienne animation
+    textElement.classList.add("smoke-in"); // Ajoute l'animation d'apparition
+    //textElement.style.opacity = "1"; // Réapparition
+
+    setTimeout(() => {
+      //isAnimating = false; // Fin de l'animation
+      textElement.classList.remove("smoke-in"); // Nettoie après animation
+    }, 500); // Durée de l'animation CSS
+  }, 500); // Attend la fin de l'animation avant de changer le texte
 }
 
 
@@ -281,13 +303,6 @@ function animate() {
   water.material.uniforms['time'].value += 0.01 / 60.0;
   // Interpolation de l'angle actuel vers l'angle cible
   currentAngle += (targetAngle - currentAngle) * rotationSpeed;
-  // Limiter l'angle de rotation entre -90 degrés et 90 degrés
-  const maxAngle = Math.PI / 2;
-  if (currentAngle > maxAngle) {
-    currentAngle = maxAngle;
-  } else if (currentAngle < -maxAngle) {
-    currentAngle = -maxAngle;
-  }
   
   // Calculer la nouvelle position de la caméra
   const x = cameraRadius * Math.cos(currentAngle);
