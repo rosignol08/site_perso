@@ -1,161 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;300;400;800&display=swap');
-
-body{
-    font-family: "Poppins", sans-serif;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-.container {
-    width: 80%;
-    margin: 0 auto;
-}
-
-.header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 80px;
-}
-
-.logo {
-    width: 200px;
-}
-
-.nav {
-    display: flex;
-}
-
-.nav ul {
-    display: flex;
-    list-style: none;
-}
-
-.nav li {
-    margin: 0 10px;
-}
-
-.nav a {
-    text-decoration: none;
-    color: black;
-    font-weight: bold;
-}
-
-.button {
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: orange;
+#text-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
     color: white;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px 20px;
     border-radius: 10px;
-}
-
-.banner {
-    display: flex;
-    height: 500px;
-    margin-top: 20px;
-}
-
-.banner .text {
-    width: 50%;
-    padding: 20px;
-}
-
-.banner .text h1 {
-    font-size: 40px;
-    font-weight: bold;
-}
-
-.banner .text p {
-    font-size: 20px;
-    margin: 10px 0;
-}
-
-.banner .image {
-    width: 50%;
-}
-
-.banner .image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.content {
-    display: flex;
-    flex-wrap: wrap;
-    margin-top: 20px;
-}
-
-.section {
-    width: 25%;
-    padding: 20px;
-}
-
-.section .icon {
-    width: 100px;
-    height: 100px;
-    margin: 0 auto;
-}
-
-.section .icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-.section .text {
     text-align: center;
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
 }
 
-.section .text h2 {
-    font-size: 25px;
-    font-weight: bold;
-    margin: 10px 0;
-}
-
-.section .text p {
-    font-size: 18px;
-    margin: 10px 0;
-}
-
-.footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 80px;
-    margin-top: 20px;
-    background-color: lightgray;
-}
-
-.social {
-    display: flex;
-}
-
-.social a {
-    margin: 0 20px;
-}
-
-.social img {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-}
-
-.info {
-    display: flex;
-    flex-direction: column;
-    align-items: right;
-    margin-right: 5vh;
-}
-
-.info p {
-    margin: 0;
-}
-
-.footer .logo {
-    width: 100px;
+.fade-out {
+    opacity: 0;
 }

@@ -198,6 +198,7 @@ function rotateCamera(direction) {
 
 // Ajout des flèches pour tourner la caméra
 const leftArrow = document.createElement('div');
+leftArrow.id = 'left-arrow';
 leftArrow.innerHTML = '←';
 leftArrow.style.position = 'absolute';
 leftArrow.style.left = '20px';
@@ -209,6 +210,7 @@ leftArrow.onclick = () => rotateCamera('left');
 document.body.appendChild(leftArrow);
 
 const rightArrow = document.createElement('div');
+rightArrow.id = 'right-arrow';
 rightArrow.innerHTML = '→';
 rightArrow.style.position = 'absolute';
 rightArrow.style.right = '20px';
@@ -229,6 +231,48 @@ presentationText.style.textAlign = 'center';
 presentationText.style.color = 'black';
 presentationText.style.fontSize = '24px';
 document.body.appendChild(presentationText);
+
+// Ajout du texte dynamique
+const textElement = document.createElement('div');
+textElement.id = 'text-content';
+textElement.style.position = 'absolute';
+textElement.style.top = '80px';
+textElement.style.width = '100%';
+textElement.style.textAlign = 'center';
+textElement.style.color = 'black';
+textElement.style.fontSize = '24px';
+textElement.style.transition = 'opacity 0.5s'; // Animation CSS pour un effet fondu
+document.body.appendChild(textElement);
+
+const texts = [
+  "Texte de gauche", // Index 0
+  "Texte du milieu", // Index 1
+  "Texte de droite"  // Index 2
+];
+
+let currentIndex = 1; // Commence au milieu
+textElement.textContent = texts[currentIndex]; // Afficher le texte de départ
+
+// Ajout des événements pour changer le texte avec les flèches
+leftArrow.addEventListener("click", () => changeText(-1));
+rightArrow.addEventListener("click", () => changeText(1));
+
+function changeText(direction) {
+  let newIndex = currentIndex + direction;
+
+  // Vérifie si on dépasse les limites
+  if (newIndex < 0 || newIndex > 2) {
+    return; // Ne fait rien si on est déjà au bout
+  }
+
+  textElement.style.opacity = "0"; // Disparition douce
+
+  setTimeout(() => {
+    currentIndex = newIndex; // Met à jour l'index seulement si valide
+    textElement.textContent = texts[currentIndex];
+    textElement.style.opacity = "1"; // Réapparition
+  }, 100); // Attend la fin de l'animation avant de changer le texte
+}
 
 
 // Fonction d'animation
