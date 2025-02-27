@@ -1,4 +1,5 @@
 import * as THREE from './three.module.min.js';
+
 import { GLTFLoader } from './GLTFLoader.js';
 import { OrbitControls } from './OrbitControls.js';
 import { Water } from './Water.js';
@@ -67,6 +68,7 @@ water.position.y = 0;
 
 // Ajout des portes colorées avec des lumières
 const doorGeometry = new THREE.BoxGeometry(2, 4, 0.1);
+const lanterneGeometry = new THREE.SphereGeometry(0.13);
 
 const radius = 6; // Rayon du cercle
 const doors = [];
@@ -93,6 +95,7 @@ scene.add(rectangle_light)
 let door = new THREE.Mesh(doorGeometry, new THREE.MeshStandardMaterial({ color: 0xf39c12, emissive: 0xf39c12, emissiveIntensity: 5, toneMapped: false }));
 door.position.set(0, 1, radius);
 door.lookAt(0, 1, 0);
+door.userData.url = "https://example.com"; // URL de redirection
 doors.push(door);
 
 // Lumière pour la porte orange
@@ -125,15 +128,14 @@ rectangle_light.lookAt(0, 1, 0);
 scene.add(rectangle_light)
 */
 
-// Chargement du modèle GLTF pour la porte verte
+// Chargement du modèle GLTF pour le personnage
 const loader = new GLTFLoader();
-let model; // Define model in a higher scope
+let model; //definition du model pour pouvoir le manipuler
 loader.load('js/assets/docteur/steampunk_plague_doctor.glb', function (gltf) {
   model = gltf.scene;
   model.position.set(-radius, 0, 0);
   model.position.x = -20;
   model.position.y = 1.45;
-  //model.lookAt(0, 1, 0);
   model.scale.set(1.5, 1.5, 1.5);
   model.rotation.y = -1;
   scene.add(model);
@@ -141,10 +143,30 @@ loader.load('js/assets/docteur/steampunk_plague_doctor.glb', function (gltf) {
   console.error(error);
 });
 
+let door_lanterne = new THREE.Mesh(lanterneGeometry, new THREE.MeshStandardMaterial({ color: 0xf39c12, emissive: 0xf39c12, emissiveIntensity: 5, toneMapped: false }));
+door_lanterne.position.set(-20, 2, 0.2);
+//door_lanterne.scale.set(0.1, 0.1, 0.1);
+door_lanterne.lookAt(0, 1, 0);
+scene.add(door_lanterne);
+
+// Lumière pour la porte orange
+//let largeur_lumiere_lanterne = 10.0;
+//let hauteur_lumiere_lanterne = 10.0;
+//let intensite_lanterne = 50;
+//let couleur_lanterne = 0xff2929;
+//let rectangle_light_lanterne = new THREE.RectAreaLight(couleur_lanterne, intensite_lanterne, largeur_lumiere_lanterne, hauteur_lumiere_lanterne);
+//rectangle_light_lanterne.position.set(-radius, 0, 0);
+//rectangle_light_lanterne.position.x = -10;
+//rectangle_light_lanterne.position.y = 1.45;
+//rectangle_light_lanterne.power = 1000;
+//rectangle_light_lanterne.lookAt(0, 1, 0);
+//scene.add(rectangle_light_lanterne)
+
 // Porte bleue
 door = new THREE.Mesh(doorGeometry, new THREE.MeshStandardMaterial({ color: 0x2192d3, emissive: 0x2192d3, emissiveIntensity: 5, toneMapped: false }));
 door.position.set(0, 1, -radius);
 door.lookAt(0, 1, 0);
+door.userData.url ="https://linktr.ee/joyca_discobeast"; // URL de redirection
 doors.push(door);
 
 // Lumière pour la porte bleue
@@ -158,23 +180,56 @@ rectangle_light.power = 100;
 rectangle_light.lookAt(0, 1, 0);
 scene.add(rectangle_light)
 
-
 // Ajout des portes et des lumières à la scène
 doors.forEach(door => scene.add(door));
 
-// Ajout d'un cube au centre de la scène
-const cubeGeometry = new THREE.BoxGeometry(100, 100, 0.1);
-const cubeMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-cube.rotation.x = -Math.PI / 2;
-cube.position.set(0, -0.1, 0); // Positionner le cube au centre de la scène
-scene.add(cube);//TODO
+// Détection du survol avec Raycaster
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let hoveredDoor = null;
 
-// Ajout d'une skybox noire
-//const skyboxGeometry = new THREE.BoxGeometry(100, 100, 100);
-//const skyboxMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide });
-//const skybox = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
-//scene.add(skybox);
+// Animation de survol
+function onMouseMove(event) {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(doors);
+
+  if (intersects.length > 0) {
+      if (hoveredDoor !== intersects[0].object) {
+          resetDoors(); // Réinitialise les autres portes
+          hoveredDoor = intersects[0].object;
+
+          // Animation de grossissement
+          gsap.to(hoveredDoor.scale, { x: 1.5, y: 1.5, duration: 0.3 });
+          gsap.to(hoveredDoor.rotation, { z: hoveredDoor.rotation.z + 0.1, duration: 0.3 });
+      }
+  } else {
+      resetDoors();
+  }
+}
+
+// Réinitialisation des portes si la souris quitte
+function resetDoors() {
+  if (hoveredDoor) {
+      gsap.to(hoveredDoor.scale, { x: 1, y: 1, duration: 0.3 });
+      gsap.to(hoveredDoor.rotation, { z: 0, duration: 0.3 });
+      hoveredDoor = null;
+  }
+}
+
+// Gestion du clic pour redirection
+function onMouseClick() {
+  if (hoveredDoor) {
+    window.location.href = hoveredDoor.userData.url;
+  }
+}
+
+// Ajout des écouteurs d'événements
+window.addEventListener('mousemove', onMouseMove);
+window.addEventListener('click', onMouseClick);
+
 
 // Position initiale de la caméra
 const cameraRadius = 5; // Distance de la caméra par rapport au centre
