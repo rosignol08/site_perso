@@ -95,7 +95,7 @@ scene.add(rectangle_light)
 let door = new THREE.Mesh(doorGeometry, new THREE.MeshStandardMaterial({ color: 0xf39c12, emissive: 0xf39c12, emissiveIntensity: 5, toneMapped: false }));
 door.position.set(0, 1, radius);
 door.lookAt(0, 1, 0);
-door.userData.url = "https://example.com"; // URL de redirection
+door.userData.url = "info.html"; // URL de redirection
 doors.push(door);
 
 // Lumière pour la porte orange
@@ -166,7 +166,7 @@ scene.add(door_lanterne);
 door = new THREE.Mesh(doorGeometry, new THREE.MeshStandardMaterial({ color: 0x2192d3, emissive: 0x2192d3, emissiveIntensity: 5, toneMapped: false }));
 door.position.set(0, 1, -radius);
 door.lookAt(0, 1, 0);
-door.userData.url ="https://linktr.ee/joyca_discobeast"; // URL de redirection
+door.userData.url ="presentation_page.html"; // URL de redirection
 doors.push(door);
 
 // Lumière pour la porte bleue
