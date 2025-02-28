@@ -45,7 +45,7 @@ const bloomPass = new UnrealBloomPass(
 composer.addPass( bloomPass );
 
 // Ajout de l'eau
-const waterGeometry = new THREE.PlaneGeometry(1000, 1000);
+const waterGeometry = new THREE.PlaneGeometry(100, 100);
 const water = new Water(
   waterGeometry,
   {
@@ -57,7 +57,7 @@ const water = new Water(
     sunDirection: new THREE.Vector3(),
     sunColor: 0x000000,
     waterColor: 0x000000, // noir
-    distortionScale: 3.0, // Augmente la distorsion pour plus de réalisme
+    distortionScale: 0.50, // Augmente la distorsion pour plus de réalisme
     fog: scene.fog !== undefined,
     alpha: 0.0, // Permet d'ajouter un peu de transparence
   }
@@ -95,7 +95,7 @@ scene.add(rectangle_light)
 let door = new THREE.Mesh(doorGeometry, new THREE.MeshStandardMaterial({ color: 0xf39c12, emissive: 0xf39c12, emissiveIntensity: 5, toneMapped: false }));
 door.position.set(0, 1, radius);
 door.lookAt(0, 1, 0);
-door.userData.url = "info.html"; // URL de redirection
+door.userData.url = "page_connexion.html"; // URL de redirection
 doors.push(door);
 
 // Lumière pour la porte orange
@@ -362,7 +362,7 @@ function changeText(direction) {
 // Fonction d'animation
 function animate() {
   requestAnimationFrame(animate);
-  water.material.uniforms['time'].value += 0.01 / 60.0;
+  water.material.uniforms['time'].value += 0.1 / 60.0;
   // Interpolation de l'angle actuel vers l'angle cible
   currentAngle += (targetAngle - currentAngle) * rotationSpeed;
   
