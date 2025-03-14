@@ -308,9 +308,9 @@ textElement.style.transition = 'opacity 0.5s'; // Animation CSS pour un effet fo
 document.body.appendChild(textElement);
 
 const texts = [
-  "Texte de gauche", // Index 0
-  "Texte du milieu", // Index 1
-  "Texte de droite"  // Index 2
+  "Cliquez sur le rectangle pour me contacter", // Index 0
+  "Bienvenue sur mon site personnel", // Index 1
+  "Cliquez sur le rectangle pour découvrir qui je suis et ce que je fais."  // Index 2
 ];
 
 let currentIndex = 1; // Commence au milieu
@@ -386,4 +386,5 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
 });

@@ -178,6 +178,8 @@ body {
 }
 
 .container {
+  position: relative;
+  z-index: 100;
   text-align: center;
   background: #2a2a40;
   padding: 20px;
@@ -195,6 +197,8 @@ body {
 }
 
 .links {
+  position: relative;
+  z-index: 100;
   display: flex;
   flex-direction: column;
   gap: 10px;

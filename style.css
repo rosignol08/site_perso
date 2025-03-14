@@ -1,3 +1,21 @@
+
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Empêche le défilement */
+}
+
+#canvas {
+  display: block; /* Supprime l'espace en dessous du canvas */
+  position: fixed; /* Fixe le canvas par rapport à la fenêtre */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
 #text-container {
     position: absolute;
     top: 50%;
