@@ -129,51 +129,79 @@
           
 
      </script>
-      
-    <section class="example-section">
-        <div class="example">
-          <div class="example-image">
-            <!-- <img src="path/to/image1.jpg" alt="Example Image 1"> -->
-            <p>J'ai des compétences de programmation en divers langages comme le C. Vous pouvez consulter un exemple <a href="https://github.com/rosignol08/recherche_occurence_en_C">ici</a>.</p>
-          </div>
-          <div class="example-description">
-            <h3>Exemple de Code</h3>
-            <pre><code>
-                int main() {
-                    printf("Hello, World!\n");
-                    return 0;
-                }
-                </code></pre>
-          </div>
-        </div>
-        <div class="example">
-          <div class="example-description">
-            <h3>Exemple de Code (encore)</h3>
-            <pre><code>
-                int main() {
-                    std::cout << "Hello, World!";
-                    return 0;
-                }
-            </code></pre>
-          </div>
-            <div class="example-image">
-                <p>Ainsi que le C++, consultable <a href="https://github.com/rosignol08/ecosyst-me-cpp">ici</a> également.</p>
-                <!-- <img src="path/to/image1.jpg" alt="Example Image 2"> -->
-            </div>
-        </div>
-        <div class="example">
-            <div class="example-image">
-              <!-- <img src="path/to/image1.jpg" alt="Example Image 1"> -->
-              <p>Dans le cadre d’un concours universitaire, j’ai eu l’occasion de faire un jeu vidéo que j’ai publié sur ma page <a href="https://rosignol.itch.io/">itch</a> afin d’améliorer mes compétences dans le domaine.</p>
-            </div>
-            <div class="example-description">
-              <h3>Création d'un jeu</h3>
-            <img src="resources/img_jeu_1.png" alt="Example Image 1" style="width: 50%; height: auto;">
-              
-            </div>
-          </div>
-        <!-- Add more examples as needed -->
+    <section class="floating-space">
+        <div class="floating-rectangle" data-url="https://example.com/page1">Projet tutoré</div>
+        <div class="floating-rectangle" data-url="https://example.com/page2">C</div>
+        <div class="floating-rectangle" data-url="https://example.com/page3">C++</div>
+        <!-- Ajoute plus de rectangles selon tes besoins -->
     </section>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const rectangles = document.querySelectorAll('.floating-rectangle');
+            const floatingSpace = document.querySelector('.floating-space');
+            const spaceWidth = floatingSpace.offsetWidth;
+            const spaceHeight = floatingSpace.offsetHeight;
+        
+            rectangles.forEach(rectangle => {
+                let posX = Math.random() * (spaceWidth - rectangle.offsetWidth);
+                let posY = Math.random() * (spaceHeight - rectangle.offsetHeight);
+                let velocityX = (Math.random() - 0.5) * 0.5; // Vitesse initiale aléatoire sur X
+                let velocityY = (Math.random() - 0.5) * 0.5; // Vitesse initiale aléatoire sur Y
+        
+                rectangle.style.left = `${posX}px`;
+                rectangle.style.top = `${posY}px`;
+        
+                function updatePosition() {
+                    // Mettre à jour la position
+                    posX += velocityX;
+                    posY += velocityY;
+        
+                    // Vérifier les collisions avec les bords
+                    if (posX + rectangle.offsetWidth > spaceWidth || posX < 0) {
+                        velocityX = -velocityX;
+                    }
+                    if (posY + rectangle.offsetHeight > spaceHeight || posY < 0) {
+                        velocityY = -velocityY;
+                    }
+        
+                    // Vérifier les collisions avec les autres rectangles
+                    rectangles.forEach(otherRectangle => {
+                        if (rectangle !== otherRectangle) {
+                            const otherPosX = parseFloat(otherRectangle.style.left);
+                            const otherPosY = parseFloat(otherRectangle.style.top);
+        
+                            if (posX < otherPosX + otherRectangle.offsetWidth &&
+                                posX + rectangle.offsetWidth > otherPosX &&
+                                posY < otherPosY + otherRectangle.offsetHeight &&
+                                posY + rectangle.offsetHeight > otherPosY) {
+                                // Inverser la direction en cas de collision
+                                velocityX = -velocityX;
+                                velocityY = -velocityY;
+                            }
+                        }
+                    });
+        
+                    // Mettre à jour le style
+                    rectangle.style.left = `${posX}px`;
+                    rectangle.style.top = `${posY}px`;
+        
+                    requestAnimationFrame(updatePosition);
+                }
+        
+                // Gérer la redirection au clic
+                rectangle.addEventListener('click', function() {
+                    const url = rectangle.getAttribute('data-url');
+                    if (url) {
+                        window.location.href = url;
+                    }
+                });
+        
+                // Démarrer l'animation
+                updatePosition();
+            });
+        });
+                
+    </script>    
     <div class="footer">
         <div class="social">
             <a href="https://www.linkedin.com/in/romaric-chaffray-990100269/"><img src="resources/logo_in.png" alt="linkedin"></a>
