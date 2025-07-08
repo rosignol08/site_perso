@@ -19,9 +19,22 @@
         }
     }
     </script>
-    <!--     <script src="three.module.min.js"></script> -->
+    <!--     <script src="three.module.min.js"></script>
     <script type="module" src="./js/script.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    -->
+    <script>
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+        if (isMobile) {
+          //redirige vers les phones
+          window.location.href = "phone.html";
+        } else {
+          //pour rediriger vers les desktops
+          window.location.href = "phone.html";
+        }
+    </script>
+
     <!--  
     <div id="text-container"></div>
         <p id="text-content">Premier texte affiché</p></div>

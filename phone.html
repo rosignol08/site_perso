@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bienvenue - Site Personnel</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      font-family: sans-serif;
+      background-color: #d2f1ce; /* vert pastel */
+    }
+
+    .parallax {
+      position: relative;
+      height: 100vh;
+      perspective: 2px;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .layer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100vh;
+      background-position: center;
+      background-size: contain;
+      background-repeat: no-repeat;
+      transition: transform 0.1s ease-out;
+    }
+
+    .layer.tree {
+      background-image: url('resource/bjr.png'); /* à remplacer */
+      transform: translateZ(-01.5px) scale(1.5);
+    }
+
+    .layer.branch1 {
+      background-image: url('resource/nuit.png'); /* à remplacer */
+      transform: translateZ(-01.3px) scale(1.3);
+    }
+
+    .layer.branch2 {
+      background-image: url('resource/gmail.png'); /* à remplacer */
+      transform: translateZ(-01.1px) scale(1.1);
+    }
+
+    .layer.branch3 {
+      background-image: url('resource/logo.png'); /* à remplacer */
+      transform: translateZ(0px) scale(1);
+    }
+
+    .content {
+      position: relative;
+      z-index: 10;
+      padding-top: 100px; /* Changed from 80vh to put content at top */
+      text-align: center;
+      color: #2e4d34;
+    }
+    .content h1 {
+      font-size: 3em;
+      margin: 0;
+    }
+    
+    /* Désactiver l'effet de parallaxe */
+    @media (prefers-reduced-motion: reduce) {
+      .parallax {
+        perspective: none;
+      }
+      
+      .layer {
+        position: absolute;
+        transform: none !important;
+        transition: none;
+      }
+    }
+    
+    /* Ajouter un bouton pour activer/désactiver le parallaxe */
+    .parallax-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px;
+      background: #4b8f5b;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 100;
+    }
+
+    .footer-section {
+      position: relative;
+      margin-top: 0;
+      padding: 60px 20px;
+      background-color: #a4c099;
+      text-align: center;
+    }
+
+    .footer-section p {
+      font-size: 1.2em;
+      margin-bottom: 30px;
+    }
+
+    .footer-section button {
+      margin: 0 10px;
+      padding: 15px 25px;
+      font-size: 1em;
+      background-color: #4b8f5b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .footer-section button:hover {
+      background-color: #357a45;
+    }
+
+    /* Styles pour le nuage de points 3D - maintenant en haut */
+    .cloud-container {
+      height: 100vh;
+      perspective: 1000px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(to bottom, #d2f1ce, #a4c099);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cloud-3d {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease-out;
+    }
+
+    .cloud-point {
+      position: absolute;
+      z-index: 20;
+      width: 80px;
+      height: 40px;
+      background: linear-gradient(45deg, #4b8f5b, #357a45);
+      border: none;
+      border-radius: 20px;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+
+    .cloud-point:hover {
+      background: linear-gradient(45deg, #357a45, #2d5a35);
+      transform: scale(1.2);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+    }
+
+    .cloud-instructions {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #2e4d34;
+      font-size: 16px;
+      opacity: 0.8;
+      background: rgba(255,255,255,0.2);
+      padding: 10px 20px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .content {
+      position: relative;
+      z-index: 10;
+      padding-top: 50px;
+      text-align: center;
+      color: #2e4d34;
+    }
+
+  </style>
+</head>
+<body>
+    <div class="content">
+    <h1>Bienvenue</h1>
+  </div>
+
+  
+  <!-- Nuage de points 3D en haut de page -->
+  <div class="cloud-container">
+    <div class="cloud-3d" id="cloud3d">
+      <!-- Les points seront générés par JavaScript -->
+    </div>
+    <div class="cloud-instructions">Glissez la souris pour faire tourner le nuage de navigation</div>
+  </div>
+
+  <div class="footer-section">
+    <p>Bienvenue à la base de mon arbre personnel. Explore mes projets, ma bio et comment me contacter !</p>
+    <button onclick="window.location.href='contact.html'">Contact</button>
+    <button onclick="window.location.href='bio.html'">Biographie</button>
+  </div>
+
+  <script>
+    // Données des points du nuage - repositionnés pour mieux occuper l'espace
+    const cloudPoints = [
+      { label: 'GitHub', url: 'https://github.com', x: 0, y: 0, z: 0 },
+      { label: 'LinkedIn', url: 'https://linkedin.com', x: 120, y: 60, z: -80 },
+      { label: 'Email', url: 'mailto:contact@example.com', x: -100, y: -80, z: 60 },
+      { label: 'CV', url: 'resources/cv.pdf', x: 80, y: -60, z: 100 },
+      { label: 'Portfolio', url: '#', x: -120, y: 90, z: -100 },
+      { label: 'Blog', url: '#', x: 60, y: 120, z: 80 },
+      { label: 'Projects', url: '#', x: -80, y: -120, z: -60 },
+      { label: 'Skills', url: '#', x: 110, y: -30, z: 120 }
+    ];
+
+    let isMouseDown = false;
+    let mouseX = 0;
+    let mouseY = 0;
+    let rotationX = 0;
+    let rotationY = 0;
+
+    function createCloudPoint(point, index) {
+      const pointElement = document.createElement('button');
+      pointElement.className = 'cloud-point';
+      pointElement.textContent = point.label;
+      pointElement.style.transform = `translate3d(0px, 0px, 0px)`;
+
+      pointElement.onclick = () => {
+        if (point.url.startsWith('mailto:') || point.url.startsWith('http')) {
+          window.open(point.url, '_blank');
+        } else if (point.url !== '#') {
+          window.location.href = point.url;
+        }
+      };
+      return pointElement;
+    }
+
+    // Fonction pour calculer la position 3D d'un point après rotation
+    function getRotatedPosition(point, rotX, rotY) {
+      const radX = rotX * Math.PI / 180;
+      const radY = rotY * Math.PI / 180;
+      
+      // Rotation autour de Y puis X
+      let x = point.x * Math.cos(radY) + point.z * Math.sin(radY);
+      let y = point.y * Math.cos(radX) - (point.z * Math.cos(radY) - point.x * Math.sin(radY)) * Math.sin(radX);
+      let z = point.y * Math.sin(radX) + (point.z * Math.cos(radY) - point.x * Math.sin(radY)) * Math.cos(radX);
+      
+      return { x, y, z };
+    }
+
+    function initCloud() {
+      const cloud = document.getElementById('cloud3d');
+      
+      // Créer les points
+      cloudPoints.forEach((point, index) => {
+        cloud.appendChild(createCloudPoint(point, index));
+      });
+    }
+
+    function updateCloudRotation() {
+      const cloud = document.getElementById('cloud3d');
+      cloud.querySelectorAll('.cloud-point').forEach((el, i) => {
+    const rotated = getRotatedPosition(cloudPoints[i], rotationX, rotationY);
+    el.style.transform = `translate3d(${rotated.x}px, ${rotated.y}px, ${rotated.z}px)`;
+  });
+
+    }
+
+    // Gestion des événements souris pour la rotation du nuage
+    document.querySelector('.cloud-container').addEventListener('mousedown', (e) => {
+      isMouseDown = true;
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (isMouseDown) {
+        const deltaX = e.clientX - mouseX;
+        const deltaY = e.clientY - mouseY;
+        
+        rotationY += deltaX * 0.5;
+        rotationX -= deltaY * 0.5;
+        
+        updateCloudRotation();
+        
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      isMouseDown = false;
+    });
+
+    // Auto-rotation lente quand pas d'interaction
+    setInterval(() => {
+      if (!isMouseDown) {
+        rotationY += 0.2;
+        updateCloudRotation();
+      }
+    }, 50);
+
+    // Initialiser le nuage au chargement de la page
+    document.addEventListener('DOMContentLoaded', initCloud);
+  </script>
+</body>
+</html>
