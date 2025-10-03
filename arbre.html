@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arbre 3D - Three.js</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #controls.collapsed {
+            transform: translateX(-280px);
+        }
+
+        .controls-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .controls-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .toggle-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 8px 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .toggle-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .controls-content {
+            padding: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .slider-container {
+            position: relative;
+            margin-top: 5px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e1e5e9;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .value-display {
+            position: absolute;
+            right: 0;
+            top: -25px;
+            background: #333;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .color-input {
+            width: 100%;
+            height: 40px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #canvas {
+            display: block;
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="controls">
+            <div class="controls-header">
+                <span class="controls-title">Paramètres de l'Arbre</span>
+                <button class="toggle-btn" id="toggleBtn">⌃</button>
+            </div>
+            <div class="controls-content">
+                <div class="control-group">
+                    <label class="control-label" for="trunkHeight">Hauteur du Tronc</label>
+                    <div class="slider-container">
+                        <input type="range" id="trunkHeight" class="slider" min="2" max="8" value="4" step="0.1">
+                        <span class="value-display" id="trunkHeightValue">4.0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label" for="trunkRadius">Épaisseur du Tronc</label>
+                    <div class="slider-container">
+                        <input type="range" id="trunkRadius" class="slider" min="0.1" max="0.5" value="0.2" step="0.01">
+                        <span class="value-display" id="trunkRadiusValue">0.20</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label" for="crownSize">Taille de la Couronne</label>
+                    <div class="slider-container">
+                        <input type="range" id="crownSize" class="slider" min="1" max="4" value="2.5" step="0.1">
+                        <span class="value-display" id="crownSizeValue">2.5</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label" for="trunkColor">Couleur du Tronc</label>
+                    <input type="color" id="trunkColor" class="color-input" value="#8B4513">
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label" for="leavesColor">Couleur des Feuilles</label>
+                    <input type="color" id="leavesColor" class="color-input" value="#228B22">
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label" for="rotationSpeed">Vitesse de Rotation</label>
+                    <div class="slider-container">
+                        <input type="range" id="rotationSpeed" class="slider" min="0" max="0.02" value="0.005" step="0.001">
+                        <span class="value-display" id="rotationSpeedValue">0.005</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="canvas"></canvas>
+
+        <div class="info-panel">
+            <div>🖱️ Clic gauche + glisser : Rotation</div>
+            <div>🔍 Molette : Zoom</div>
+            <div>⚙️ Utilisez le panneau pour modifier l'arbre</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Variables globales
+        let scene, camera, renderer, tree, controls;
+        let treeParams = {
+            trunkHeight: 4,
+            trunkRadius: 0.2,
+            crownSize: 2.5,
+            trunkColor: 0x8B4513,
+            leavesColor: 0x228B22,
+            rotationSpeed: 0.005
+        };
+
+        // Variables pour le contrôle de caméra orbital
+        let orbitControls = {
+            target: new THREE.Vector3(0, 2, 0),
+            distance: 8,
+            azimuth: 0,
+            elevation: Math.PI / 4,
+            velocity: { azimuth: 0, elevation: 0, distance: 0 },
+            damping: 0.92,
+            isDragging: false,
+            previousMouse: { x: 0, y: 0 }
+        };
+
+        // Initialisation
+        function init() {
+            // Scène
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+
+            // Caméra
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('canvas'),
+                antialias: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Éclairage
+            setupLighting();
+
+            // Sol
+            createGround();
+
+            // Arbre initial
+            createTree();
+
+            // Contrôles de caméra simplifiés
+            setupCameraControls();
+
+            // Événements
+            setupEventListeners();
+
+            // Animation
+            animate();
+        }
+
+        function setupLighting() {
+            // Lumière ambiante
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            // Lumière directionnelle (soleil)
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+        }
+
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(20, 20);
+            const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x90EE90 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+        }
+
+        function createTree() {
+            // Supprimer l'ancien arbre s'il existe
+            if (tree) {
+                scene.remove(tree);
+            }
+
+            tree = new THREE.Group();
+
+            // Tronc
+            const trunkGeometry = new THREE.CylinderGeometry(
+                treeParams.trunkRadius, 
+                treeParams.trunkRadius * 1.2, 
+                treeParams.trunkHeight, 
+                8
+            );
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: treeParams.trunkColor });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = treeParams.trunkHeight / 2;
+            trunk.castShadow = true;
+            tree.add(trunk);
+
+            // Couronne (feuillage)
+            const crownGeometry = new THREE.SphereGeometry(treeParams.crownSize, 8, 6);
+            const crownMaterial = new THREE.MeshLambertMaterial({ color: treeParams.leavesColor });
+            const crown = new THREE.Mesh(crownGeometry, crownMaterial);
+            crown.position.y = treeParams.trunkHeight + treeParams.crownSize * 0.5;
+            crown.castShadow = true;
+            
+            // Ajouter quelques variations dans la couronne
+            crown.scale.set(
+                1 + Math.random() * 0.2,
+                0.8 + Math.random() * 0.3,
+                1 + Math.random() * 0.2
+            );
+            tree.add(crown);
+
+            // Ajouter quelques branches
+            for (let i = 0; i < 3; i++) {
+                const branchGeometry = new THREE.CylinderGeometry(0.05, 0.08, 1, 6);
+                const branchMaterial = new THREE.MeshLambertMaterial({ color: treeParams.trunkColor });
+                const branch = new THREE.Mesh(branchGeometry, branchMaterial);
+                
+                branch.position.y = treeParams.trunkHeight * 0.7 + Math.random() * treeParams.trunkHeight * 0.3;
+                branch.position.x = (Math.random() - 0.5) * 1.5;
+                branch.position.z = (Math.random() - 0.5) * 1.5;
+                branch.rotation.z = (Math.random() - 0.5) * Math.PI * 0.3;
+                branch.rotation.x = (Math.random() - 0.5) * Math.PI * 0.3;
+                branch.castShadow = true;
+                
+                tree.add(branch);
+            }
+
+            scene.add(tree);
+        }
+
+        function setupCameraControls() {
+            const canvas = document.getElementById('canvas');
+
+            // Position initiale de la caméra
+            updateCameraPosition();
+
+            canvas.addEventListener('mousedown', (e) => {
+                orbitControls.isDragging = true;
+                orbitControls.previousMouse = { x: e.clientX, y: e.clientY };
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (orbitControls.isDragging) {
+                    const deltaX = e.clientX - orbitControls.previousMouse.x;
+                    const deltaY = e.clientY - orbitControls.previousMouse.y;
+
+                    // Vitesse de rotation basée sur le mouvement de la souris
+                    orbitControls.velocity.azimuth = deltaX * 0.01;
+                    orbitControls.velocity.elevation = deltaY * 0.01;
+
+                    orbitControls.previousMouse = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                orbitControls.isDragging = false;
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                orbitControls.isDragging = false;
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                orbitControls.velocity.distance = e.deltaY * 0.01;
+            });
+        }
+
+        function updateCameraPosition() {
+            // Appliquer l'inertie et le damping
+            if (!orbitControls.isDragging) {
+                orbitControls.velocity.azimuth *= orbitControls.damping;
+                orbitControls.velocity.elevation *= orbitControls.damping;
+            }
+            orbitControls.velocity.distance *= orbitControls.damping;
+
+            // Mettre à jour les angles et la distance
+            orbitControls.azimuth += orbitControls.velocity.azimuth;
+            orbitControls.elevation += orbitControls.velocity.elevation;
+            orbitControls.distance += orbitControls.velocity.distance;
+
+            // Limiter l'élévation pour éviter les retournements
+            orbitControls.elevation = Math.max(0.1, Math.min(Math.PI - 0.1, orbitControls.elevation));
+            
+            // Limiter la distance de zoom
+            orbitControls.distance = Math.max(2, Math.min(20, orbitControls.distance));
+
+            // Calculer la position de la caméra en coordonnées sphériques
+            const x = orbitControls.distance * Math.sin(orbitControls.elevation) * Math.cos(orbitControls.azimuth);
+            const y = orbitControls.distance * Math.cos(orbitControls.elevation);
+            const z = orbitControls.distance * Math.sin(orbitControls.elevation) * Math.sin(orbitControls.azimuth);
+
+            camera.position.set(
+                orbitControls.target.x + x,
+                orbitControls.target.y + y,
+                orbitControls.target.z + z
+            );
+
+            camera.lookAt(orbitControls.target);
+        }
+
+
+
+        function setupEventListeners() {
+            // Toggle du panneau de contrôle
+            document.getElementById('toggleBtn').addEventListener('click', () => {
+                const controls = document.getElementById('controls');
+                const btn = document.getElementById('toggleBtn');
+                controls.classList.toggle('collapsed');
+                btn.textContent = controls.classList.contains('collapsed') ? '⌄' : '⌃';
+            });
+
+            // Contrôles des paramètres
+            const controls = {
+                trunkHeight: document.getElementById('trunkHeight'),
+                trunkRadius: document.getElementById('trunkRadius'),
+                crownSize: document.getElementById('crownSize'),
+                trunkColor: document.getElementById('trunkColor'),
+                leavesColor: document.getElementById('leavesColor'),
+                rotationSpeed: document.getElementById('rotationSpeed')
+            };
+
+            // Mise à jour des valeurs affichées et de l'arbre
+            Object.keys(controls).forEach(param => {
+                const control = controls[param];
+                const valueDisplay = document.getElementById(param + 'Value');
+
+                control.addEventListener('input', () => {
+                    if (param === 'trunkColor' || param === 'leavesColor') {
+                        treeParams[param] = parseInt(control.value.replace('#', '0x'));
+                    } else {
+                        treeParams[param] = parseFloat(control.value);
+                    }
+
+                    if (valueDisplay) {
+                        valueDisplay.textContent = control.value;
+                    }
+
+                    if (param !== 'rotationSpeed') {
+                        createTree();
+                    }
+                });
+            });
+
+            // Redimensionnement
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Mettre à jour la position de la caméra avec inertie
+            updateCameraPosition();
+
+            // Rotation automatique de l'arbre
+            if (tree && treeParams.rotationSpeed > 0) {
+                tree.rotation.y += treeParams.rotationSpeed;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Démarrage
+        init();
+    </script>
+</body>
+</html>

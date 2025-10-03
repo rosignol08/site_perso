@@ -1,12 +1,13 @@
 import * as THREE from './three.module.min.js';
 
 import { GLTFLoader } from './GLTFLoader.js';
-import { OrbitControls } from './OrbitControls.js';
-import { Water } from './Water.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+// Import GSAP for animations
+// GSAP is loaded globally via a <script> tag in the HTML
 
 // Initialisation de la scène
 const scene = new THREE.Scene();
@@ -20,14 +21,7 @@ renderer.toneMappingExposure = 0.3;
 //scene.background = new THREE.Color(0x000000);
 //scene.background = 0x0000ff;
 //renderer.setClearColor( 0x000000, 1);
-scene.background = new THREE.Color('#c7c7c7');
-
-// Ajout du brouillard à la scène
-const fogColor =new THREE.Color('#c7c7c7');// Couleur du brouillard
-//scene.fog = new THREE.Fog(fogColor, 1, 1000);
-
-// Ajout de brouillard exponentiel
-scene.fog = new THREE.FogExp2(fogColor, 0.035);
+scene.background = new THREE.Color('#000000');
 
 
 //shaders
@@ -38,48 +32,25 @@ composer.addPass( renderPass );
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2( window.innerWidth, window.innerHeight ),
   0.30,
-  1.5,
+  0.20,
   0.0
 )
+
 //bloomPass.threshold = 0.0;
 composer.addPass( bloomPass );
 
-// Ajout de l'eau
-const waterGeometry = new THREE.PlaneGeometry(100, 100);
-const water = new Water(
-  waterGeometry,
-  {
-    textureWidth: 512,
-    textureHeight: 512,
-    waterNormals: new THREE.TextureLoader().load('js/assets/textures/waternormals.jpg', function (texture) {
-      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    }),
-    sunDirection: new THREE.Vector3(),
-    sunColor: 0x000000,
-    waterColor: 0x000000, // noir
-    distortionScale: 0.50, // Augmente la distorsion pour plus de réalisme
-    fog: scene.fog !== undefined,
-    alpha: 0.0, // Permet d'ajouter un peu de transparence
-  }
-);
-water.rotation.x = -Math.PI / 2;
-scene.add(water);
-water.position.y = 0;
+//un rectangle coloré avec des lumières
+const fenetresGeometry = new THREE.BoxGeometry(4, 2, 0.1);
 
-// Ajout des portes colorées avec des lumières
-const doorGeometry = new THREE.BoxGeometry(2, 4, 0.1);
-const lanterneGeometry = new THREE.SphereGeometry(0.13);
-
-const radius = 6; // Rayon du cercle
-const doors = [];
+const fenetres = [];
+let fenetre;
+//fenetre blanche
+fenetre = new THREE.Mesh(fenetresGeometry, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 5, toneMapped: false }));
+fenetre.position.set(1, 1, 0);
+fenetre.lookAt(0, 1, 0);
+fenetres.push(fenetre);
 /*
-// Porte blanche
-let door = new THREE.Mesh(doorGeometry, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 5, toneMapped: false }));
-door.position.set(radius, 1, 0);
-door.lookAt(0, 1, 0);
-doors.push(door);
-
-// Lumière pour la porte blanche
+// Lumière pour la fenêtre blanche voir apres
 let largeur_lumiere = 2.0;
 let hauteur_lumiere = 4.0;
 let intensite = 5;
@@ -91,14 +62,14 @@ rectangle_light.lookAt(0, 1, 0);
 scene.add(rectangle_light)
 */
 
-// Porte orange
-let door = new THREE.Mesh(doorGeometry, new THREE.MeshStandardMaterial({ color: 0xf39c12, emissive: 0xf39c12, emissiveIntensity: 5, toneMapped: false }));
-door.position.set(0, 1, radius);
-door.lookAt(0, 1, 0);
-door.userData.url = "page_connexion.html"; // URL de redirection
-doors.push(door);
-
-// Lumière pour la porte orange
+//fenetre orange
+fenetre = new THREE.Mesh(fenetresGeometry, new THREE.MeshStandardMaterial({ color: 0xf39c12, emissive: 0xf39c12, emissiveIntensity: 5, toneMapped: false }));
+fenetre.position.set(0, 1, 0);
+fenetre.lookAt(0, 1, 0);
+fenetre.userData.url = "page_connexion.html"; // URL de redirection
+fenetres.push(fenetre);
+/*
+// Lumière pour la fenêtre orange
 let largeur_lumiere = 2.0;
 let hauteur_lumiere = 4.0;
 let intensite = 5;
@@ -108,85 +79,51 @@ rectangle_light.position.set(0, 0.5, radius);
 rectangle_light.power = 100;
 rectangle_light.lookAt(0, 1, 0);
 scene.add(rectangle_light)
-
-/*
-// Porte verte
-door = new THREE.Mesh(doorGeometry, new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 5, toneMapped: false }));
-door.position.set(-radius, 1, 0);
-door.lookAt(0, 1, 0);
-doors.push(door);
-
-// Lumière pour la porte verte
-largeur_lumiere = 2.0;
-hauteur_lumiere = 4.0;
-intensite = 5;
-couleur = 0x00ff00;
-rectangle_light = new THREE.RectAreaLight(couleur, intensite, largeur_lumiere, hauteur_lumiere);
-rectangle_light.position.set(-radius,0.5 , 0);
-rectangle_light.power = 100;
-rectangle_light.lookAt(0, 1, 0);
-scene.add(rectangle_light)
 */
 
-// Chargement du modèle GLTF pour le personnage
+//le modèle GLTF du pc
 const loader = new GLTFLoader();
-let model; //definition du model pour pouvoir le manipuler
-loader.load('js/assets/docteur/steampunk_plague_doctor.glb', function (gltf) {
+let model;
+let loadedGltf; // Store the loaded GLTF object
+let mixer; // Animation mixer for GLTF model
+loader.load('js/assets/pc.glb', function (gltf) {
+  loadedGltf = gltf; // Save the gltf object for later use
   model = gltf.scene;
-  model.position.set(-radius, 0, 0);
-  model.position.x = -20;
-  model.position.y = 1.45;
-  model.scale.set(1.5, 1.5, 1.5);
-  model.rotation.y = -1;
+  //model.position.set(0, 0, 0);
+  model.position.x = 2;// -20;
+  model.position.y = 0.5;// 1.45;
+  model.position.z = -1;
+  model.scale.set(2.5, 2.5, 2.5);
+  // Ajoute une couche d'émissivité au modèle pour l'effet bloom
+  
+  model.rotation.y = -1.57;
   scene.add(model);
+
+  // Initialize mixer if there are animations
+  if (gltf.animations && gltf.animations.length > 0) {
+    mixer = new THREE.AnimationMixer(model);
+  }
 }, undefined, function (error) {
   console.error(error);
 });
 
-let door_lanterne = new THREE.Mesh(lanterneGeometry, new THREE.MeshStandardMaterial({ color: 0xf39c12, emissive: 0xf39c12, emissiveIntensity: 5, toneMapped: false }));
-door_lanterne.position.set(-20, 2, 0.2);
-//door_lanterne.scale.set(0.1, 0.1, 0.1);
-door_lanterne.lookAt(0, 1, 0);
-scene.add(door_lanterne);
+let lumiere_ambiante = new THREE.AmbientLight(0xffffff, 1.5);
+scene.add(lumiere_ambiante);
 
-// Lumière pour la porte orange
-//let largeur_lumiere_lanterne = 10.0;
-//let hauteur_lumiere_lanterne = 10.0;
-//let intensite_lanterne = 50;
-//let couleur_lanterne = 0xff2929;
-//let rectangle_light_lanterne = new THREE.RectAreaLight(couleur_lanterne, intensite_lanterne, largeur_lumiere_lanterne, hauteur_lumiere_lanterne);
-//rectangle_light_lanterne.position.set(-radius, 0, 0);
-//rectangle_light_lanterne.position.x = -10;
-//rectangle_light_lanterne.position.y = 1.45;
-//rectangle_light_lanterne.power = 1000;
-//rectangle_light_lanterne.lookAt(0, 1, 0);
-//scene.add(rectangle_light_lanterne)
+// Ajout d'une lumière directionnelle vers l'objet 3D
+const lumiere_directionnelle = new THREE.DirectionalLight(0xffffff, 2);
+lumiere_directionnelle.position.set(5, 10, 5); // Position au-dessus et sur le côté
+lumiere_directionnelle.target.position.set(0, 1, -1); // Cible le modèle (même position que le modèle GLTF)
+scene.add(lumiere_directionnelle);
+scene.add(lumiere_directionnelle.target);
 
-// Porte bleue
-door = new THREE.Mesh(doorGeometry, new THREE.MeshStandardMaterial({ color: 0x2192d3, emissive: 0x2192d3, emissiveIntensity: 5, toneMapped: false }));
-door.position.set(0, 1, -radius);
-door.lookAt(0, 1, 0);
-door.userData.url ="presentation_page.html"; // URL de redirection
-doors.push(door);
-
-// Lumière pour la porte bleue
-largeur_lumiere = 2.0;
-hauteur_lumiere = 4.0;
-intensite = 5;
-couleur = 0x2192d3;
-rectangle_light = new THREE.RectAreaLight(couleur, intensite, largeur_lumiere, hauteur_lumiere);
-rectangle_light.position.set(0, 0.5, -radius);
-rectangle_light.power = 100;
-rectangle_light.lookAt(0, 1, 0);
-scene.add(rectangle_light)
-
-// Ajout des portes et des lumières à la scène
-doors.forEach(door => scene.add(door));
+//fenêtres et des lumières à la scène
+fenetres.forEach(fenetre => scene.add(fenetre));
 
 // Détection du survol avec Raycaster
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-let hoveredDoor = null;
+let hoveredFenetre = null;
 
 // Animation de survol
 function onMouseMove(event) {
@@ -194,28 +131,29 @@ function onMouseMove(event) {
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(doors);
+  const intersects = raycaster.intersectObjects(fenetres);
 
   if (intersects.length > 0) {
-      if (hoveredDoor !== intersects[0].object) {
-          resetDoors(); // Réinitialise les autres portes
-          hoveredDoor = intersects[0].object;
+      if (hoveredFenetre !== intersects[0].object) {
+          resetFenetres(); // Réinitialise les autres fenêtres
+          hoveredFenetre = intersects[0].object;
 
           // Animation de grossissement
-          gsap.to(hoveredDoor.scale, { x: 1.5, y: 1.5, duration: 0.3 });
-          gsap.to(hoveredDoor.rotation, { z: hoveredDoor.rotation.z + 0.1, duration: 0.3 });
+          gsap.to(hoveredFenetre.scale, { x: 1.5, y: 1.5, duration: 0.3 });
+          gsap.to(hoveredFenetre.rotation, { z: hoveredFenetre.rotation.z + 0.1, duration: 0.3 });
       }
   } else {
-      resetDoors();
+      resetFenetres();
   }
 }
 
 // Réinitialisation des portes si la souris quitte
-function resetDoors() {
-  if (hoveredDoor) {
-      gsap.to(hoveredDoor.scale, { x: 1, y: 1, duration: 0.3 });
-      gsap.to(hoveredDoor.rotation, { z: 0, duration: 0.3 });
-      hoveredDoor = null;
+function resetFenetres() {
+  if (hoveredFenetre) {
+
+      gsap.to(hoveredFenetre.scale, { x: 1, y: 1, duration: 0.3 });
+      gsap.to(hoveredFenetre.rotation, { z: 0, duration: 0.3 });
+      hoveredFenetre = null;
   }
 }
 
@@ -226,10 +164,13 @@ function onMouseClick() {
   }
 }
 
-// Ajout des écouteurs d'événements
-window.addEventListener('mousemove', onMouseMove);
-window.addEventListener('click', onMouseClick);
+let ecran_visible = false;
 
+if (ecran_visible) {
+  //écouteurs d'événements si l'ecrant est allumé
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('click', onMouseClick);
+}
 
 // Position initiale de la caméra
 const cameraRadius = 5; // Distance de la caméra par rapport au centre
@@ -361,21 +302,56 @@ function changeText(direction) {
 
 // Fonction d'animation
 function animate() {
+  for (fenetre of fenetres) {
+    fenetre.visible = ecran_visible;
+    fenetre.material.emissiveIntensity = ecran_visible ? 5 : 0;
+    if (model && !ecran_visible) {
+      // Rapproche doucement le modèle PC
+      gsap.to(model.position, { x: 0, duration: 2, ease: "power2.out" });
+
+      // Lance l'animation "open" si elle existe
+      if (loadedGltf && loadedGltf.animations && loadedGltf.animations.length > 0) {
+        const openAnim = loadedGltf.animations.find(anim => anim.name === "1. Plane.001Action");
+        if (openAnim && !model.userData.openPlayed) {
+          const action = mixer.clipAction(openAnim);
+          action.setLoop(THREE.LoopOnce);
+          action.clampWhenFinished = true;
+          action.play();
+          model.userData.openPlayed = true;
+        }
+      }
+      mixer.update(1 / 60);
+    }
+    }
+  
+  //if (model && !ecran_visible) {
+  //  // Animation d'apparition du modèle GLTF (par exemple, montée et rotation)
+  //  gsap.to(model.position, { y: 1.45, duration: 1, ease: "power2.out" });
+  //  gsap.to(model.rotation, {
+  //    y: 0,
+  //    duration: 1,
+  //    ease: "power2.out",
+  //    onComplete: () => {
+  //      ecran_visible = true;
+  //      // Ajoute les écouteurs d'événements une fois l'animation terminée
+  //      window.addEventListener('mousemove', onMouseMove);
+  //      window.addEventListener('click', onMouseClick);
+  //    }
+  //  });
+  //}
   requestAnimationFrame(animate);
-  water.material.uniforms['time'].value += 0.1 / 60.0;
+  //water.material.uniforms['time'].value += 0.1 / 60.0;
   // Interpolation de l'angle actuel vers l'angle cible
   currentAngle += (targetAngle - currentAngle) * rotationSpeed;
   
-  // Calculer la nouvelle position de la caméra
   const x = cameraRadius * Math.cos(currentAngle);
   const z = cameraRadius * Math.sin(currentAngle);
   camera.position.set(x, 1.5, z);
-  // Assurez-vous que la caméra regarde toujours vers le centre
   camera.lookAt(0, 1.5, 0);
   
   //controls.update();
   
-  //renderer.render(scene, camera);
+  renderer.render(scene, camera);
   composer.render();//rendue avec postprocessing
 }
 
