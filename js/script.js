@@ -5,6 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
 
 // Import GSAP for animations
 // GSAP is loaded globally via a <script> tag in the HTML
@@ -40,14 +41,14 @@ const bloomPass = new UnrealBloomPass(
 composer.addPass( bloomPass );
 
 //un rectangle coloré avec des lumières
-const fenetresGeometry = new THREE.BoxGeometry(4, 2, 0.1);
+const fenetresGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.1);
 
 const fenetres = [];
 let fenetre;
 //fenetre blanche
 fenetre = new THREE.Mesh(fenetresGeometry, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 5, toneMapped: false }));
-fenetre.position.set(1, 1, 0);
-fenetre.lookAt(0, 1, 0);
+fenetre.position.set(1,1.5,1);
+fenetre.lookAt(0, 1, 2);
 fenetres.push(fenetre);
 /*
 // Lumière pour la fenêtre blanche voir apres
@@ -64,7 +65,7 @@ scene.add(rectangle_light)
 
 //fenetre orange
 fenetre = new THREE.Mesh(fenetresGeometry, new THREE.MeshStandardMaterial({ color: 0xf39c12, emissive: 0xf39c12, emissiveIntensity: 5, toneMapped: false }));
-fenetre.position.set(0, 1, 0);
+fenetre.position.set(1, 1, 0);
 fenetre.lookAt(0, 1, 0);
 fenetre.userData.url = "page_connexion.html"; // URL de redirection
 fenetres.push(fenetre);
@@ -90,7 +91,7 @@ loader.load('js/assets/pc.glb', function (gltf) {
   loadedGltf = gltf; // Save the gltf object for later use
   model = gltf.scene;
   //model.position.set(0, 0, 0);
-  model.position.x = 2;// -20;
+  model.position.x = 0;// -20;
   model.position.y = 0.5;// 1.45;
   model.position.z = -1;
   model.scale.set(2.5, 2.5, 2.5);
@@ -107,16 +108,11 @@ loader.load('js/assets/pc.glb', function (gltf) {
   console.error(error);
 });
 
-let lumiere_ambiante = new THREE.AmbientLight(0xffffff, 1.5);
-scene.add(lumiere_ambiante);
-
-// Ajout d'une lumière directionnelle vers l'objet 3D
-const lumiere_directionnelle = new THREE.DirectionalLight(0xffffff, 2);
-lumiere_directionnelle.position.set(5, 10, 5); // Position au-dessus et sur le côté
-lumiere_directionnelle.target.position.set(0, 1, -1); // Cible le modèle (même position que le modèle GLTF)
-scene.add(lumiere_directionnelle);
-scene.add(lumiere_directionnelle.target);
-
+const pcSpotlight = new THREE.SpotLight(0xffffff, 6.5, 10, Math.PI / 6, 0.5, 1);
+pcSpotlight.position.set(0, 5, -1); // Au-dessus du PC
+pcSpotlight.target.position.set(0, 0.5, -1); // Cible le PC
+scene.add(pcSpotlight);
+scene.add(pcSpotlight.target);
 //fenêtres et des lumières à la scène
 fenetres.forEach(fenetre => scene.add(fenetre));
 
@@ -180,6 +176,28 @@ camera.lookAt(0, 1.5, 0); // Regarder vers le centre de la scène
 let currentAngle = 0; // Angle actuel de la caméra
 let targetAngle = 0; // Angle cible pour l'animation
 const rotationSpeed = 0.05; // Vitesse de rotation
+
+// Remplace la lumière ambiante par une Spotlight à la position de la caméra
+const spotlight = new THREE.SpotLight(0xffffff, 3.2);
+spotlight.position.set(0, 6.9, 3);
+spotlight.target.position.set(-10, 0, -4.1);
+spotlight.angle = Math.PI / 17.3;
+spotlight.angle = 0.41;
+//spotlight.position.copy(camera.position);
+//spotlight.target.position.set(0, 0.5, -1); // cible le modèle PC (position initiale)
+scene.add(spotlight);
+scene.add(spotlight.target);
+
+const lumiere_ecran = new THREE.RectAreaLight(0xffffff, 2, 2, 1); // largeur: 1, hauteur: 2.5
+lumiere_ecran.position.set(1, 1.2, 0.3); // Position de l'écran du PC
+lumiere_ecran.scale.set(2,1,1);
+lumiere_ecran.rotation.y = -Math.PI / 2;
+
+//lumiere_ecran.lookAt(0, 0, 0); // Direction vers la caméra
+lumiere_ecran.visible = false; // Invisible au début
+scene.add(lumiere_ecran);
+//const helper = new RectAreaLightHelper(lumiere_ecran);
+//scene.add(helper);
 
 // Fonction pour tourner la caméra
 function rotateCamera(direction) {
@@ -307,20 +325,33 @@ function animate() {
     fenetre.material.emissiveIntensity = ecran_visible ? 5 : 0;
     if (model && !ecran_visible) {
       // Rapproche doucement le modèle PC
-      gsap.to(model.position, { x: 0, duration: 2, ease: "power2.out" });
+      gsap.to(model.position, { x: 3, duration: 10, ease: "power2.out" });
 
       // Lance l'animation "open" si elle existe
       if (loadedGltf && loadedGltf.animations && loadedGltf.animations.length > 0) {
-        const openAnim = loadedGltf.animations.find(anim => anim.name === "1. Plane.001Action");
+        const openAnim = loadedGltf.animations.find(anim => anim.name === "Plane.001Action");
         if (openAnim && !model.userData.openPlayed) {
           const action = mixer.clipAction(openAnim);
           action.setLoop(THREE.LoopOnce);
           action.clampWhenFinished = true;
+          action.timeScale = 0.2;
+          // Écouteur pour détecter la fin de l'animation
+          action.getMixer().addEventListener('finished', () => {
+            //la lumière de l'écran quand l'animation est finie
+            lumiere_ecran.visible = true;
+            gsap.to(lumiere_ecran, { intensity: 8, duration: 1, ease: "power2.out" });
+            ecran_visible = true;
+            
+            // Active les interactions avec les fenêtres
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('click', onMouseClick);
+          });
+          
           action.play();
           model.userData.openPlayed = true;
         }
       }
-      mixer.update(1 / 60);
+      mixer.update(1 / 30);
     }
     }
   
@@ -346,8 +377,8 @@ function animate() {
   
   const x = cameraRadius * Math.cos(currentAngle);
   const z = cameraRadius * Math.sin(currentAngle);
-  camera.position.set(x, 1.5, z);
-  camera.lookAt(0, 1.5, 0);
+  camera.position.set(x, 2.5, z);
+  camera.lookAt(0, -0.80, 0);
   
   //controls.update();
   
