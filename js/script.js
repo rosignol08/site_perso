@@ -121,6 +121,16 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let hoveredFenetre = null;
 
+const texts = [
+  "", // Index 0
+  "Mes projets.", // Index 1
+  "À propos de moi.",  // Index 2
+  "Me contacter." // Index 3
+];
+
+let currentIndex = 0; //ecrit rien au debut
+textElement.textContent = texts[currentIndex]; // Afficher le texte de départ
+
 // Animation de survol
 function onMouseMove(event) {
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -137,6 +147,15 @@ function onMouseMove(event) {
           // Animation de grossissement
           gsap.to(hoveredFenetre.scale, { x: 1.5, y: 1.5, duration: 0.3 });
           gsap.to(hoveredFenetre.rotation, { z: hoveredFenetre.rotation.z + 0.1, duration: 0.3 });
+          if (hoveredFenetre === fenetres[0]) {
+            currentIndex = 1;
+          } else if (hoveredFenetre === fenetres[1]) {
+            currentIndex = 2;
+          } else if (hoveredFenetre === fenetres[2]) {
+            currentIndex = 3;
+          }
+          textElement.textContent = texts[currentIndex];
+
       }
   } else {
       resetFenetres();
@@ -199,124 +218,53 @@ scene.add(lumiere_ecran);
 //const helper = new RectAreaLightHelper(lumiere_ecran);
 //scene.add(helper);
 
-// Fonction pour tourner la caméra
-function rotateCamera(direction) {
-  const angleIncrement = -Math.PI / 2; // 90 degrés
-
-  if (direction === 'left') {
-    targetAngle += angleIncrement;
-  } else if (direction === 'right') {
-    targetAngle -= angleIncrement;
-  }
-
-  // Limiter l'angle de rotation entre -90 degrés et 90 degrés
-  const maxAngle = Math.PI / 2;
-  if (targetAngle > maxAngle) {
-    targetAngle = maxAngle;
-  } else if (targetAngle < -maxAngle) {
-    targetAngle = -maxAngle;
-  }
-}
-
 // Ajout des flèches pour tourner la caméra
-const leftArrow = document.createElement('div');
-leftArrow.id = 'left-arrow';
-leftArrow.innerHTML = '←';
-leftArrow.style.position = 'absolute';
-leftArrow.style.left = '20px';
-leftArrow.style.top = '50%';
-leftArrow.style.fontSize = '48px';
-leftArrow.style.color = 'black';
-leftArrow.style.cursor = 'pointer';
-leftArrow.onclick = () => rotateCamera('left');
-document.body.appendChild(leftArrow);
-
-const rightArrow = document.createElement('div');
-rightArrow.id = 'right-arrow';
-rightArrow.innerHTML = '→';
-rightArrow.style.position = 'absolute';
-rightArrow.style.right = '20px';
-rightArrow.style.top = '50%';
-rightArrow.style.fontSize = '48px';
-rightArrow.style.color = 'black';
-rightArrow.style.cursor = 'pointer';
-rightArrow.onclick = () => rotateCamera('right');
-document.body.appendChild(rightArrow);
+//const leftArrow = document.createElement('div');
+//leftArrow.id = 'left-arrow';
+//leftArrow.innerHTML = '←';
+//leftArrow.style.position = 'absolute';
+//leftArrow.style.left = '20px';
+//leftArrow.style.top = '50%';
+//leftArrow.style.fontSize = '48px';
+//leftArrow.style.color = 'black';
+//leftArrow.style.cursor = 'pointer';
+//leftArrow.onclick = () => rotateCamera('left');
+//document.body.appendChild(leftArrow);
+//
+//const rightArrow = document.createElement('div');
+//rightArrow.id = 'right-arrow';
+//rightArrow.innerHTML = '→';
+//rightArrow.style.position = 'absolute';
+//rightArrow.style.right = '20px';
+//rightArrow.style.top = '50%';
+//rightArrow.style.fontSize = '48px';
+//rightArrow.style.color = 'black';
+//rightArrow.style.cursor = 'pointer';
+//rightArrow.onclick = () => rotateCamera('right');
+//document.body.appendChild(rightArrow);
 
 // Ajout du texte de présentation
-const presentationText = document.createElement('div');
-presentationText.innerHTML = 'Cliquez sur les flèches pour explorer les différentes sections.';
-presentationText.style.position = 'absolute';
-presentationText.style.top = '20px';
-presentationText.style.width = '100%';
-presentationText.style.textAlign = 'center';
-presentationText.style.color = 'black';
-presentationText.style.fontSize = '24px';
-document.body.appendChild(presentationText);
+//const presentationText = document.createElement('div');
+//presentationText.innerHTML = 'Cliquez sur les flèches pour explorer les différentes sections.';
+//presentationText.style.position = 'absolute';
+//presentationText.style.top = '20px';
+//presentationText.style.width = '100%';
+//presentationText.style.textAlign = 'center';
+//presentationText.style.color = 'black';
+//presentationText.style.fontSize = '24px';
+//document.body.appendChild(presentationText);
 
 // Ajout du texte dynamique
-const textElement = document.createElement('div');
-textElement.id = 'text-content';
-textElement.style.position = 'absolute';
-textElement.style.top = '80px';
-textElement.style.width = '100%';
-textElement.style.textAlign = 'center';
-textElement.style.color = 'black';
-textElement.style.fontSize = '24px';
-textElement.style.transition = 'opacity 0.5s'; // Animation CSS pour un effet fondu
-document.body.appendChild(textElement);
-
-const texts = [
-  "Cliquez sur le rectangle pour me contacter", // Index 0
-  "Bienvenue sur mon site personnel", // Index 1
-  "Cliquez sur le rectangle pour découvrir qui je suis et ce que je fais."  // Index 2
-];
-
-let currentIndex = 1; // Commence au milieu
-textElement.textContent = texts[currentIndex]; // Afficher le texte de départ
-
-// Ajout des événements pour changer le texte avec les flèches
-leftArrow.addEventListener("click", () => changeText(-1));
-rightArrow.addEventListener("click", () => changeText(1));
-
-let isAnimating = false; // Variable pour suivre l'état de l'animation
-
-function changeText(direction) {
-  if (isAnimating) {
-    // Si une animation est en cours, la coupe et passe directement à la nouvelle animation
-    textElement.classList.remove("smoke-out", "smoke-in");
-  }
-
-  let newIndex = currentIndex + direction;
-
-  // Vérifie si on dépasse les limites
-  if (newIndex < 0 || newIndex > 2) {
-    return; // Ne fait rien si on est déjà au bout
-  }
-  // Désactiver les flèches pendant l'animation
-  leftArrow.style.pointerEvents = "none";
-  rightArrow.style.pointerEvents = "none";
-
-  textElement.classList.add("smoke-out"); // Ajoute l'animation de disparition
-
-  isAnimating = true; // Début de l'animation
-
-  setTimeout(() => {
-    currentIndex = newIndex; // Met à jour l'index seulement si valide
-    textElement.textContent = texts[currentIndex];
-    textElement.classList.remove("smoke-out"); // Supprime l'ancienne animation
-    textElement.classList.add("smoke-in"); // Ajoute l'animation d'apparition
-
-    setTimeout(() => {
-      isAnimating = false; // Fin de l'animation
-      textElement.classList.remove("smoke-in"); // Nettoie après animation
-      // Réactiver les flèches après l'animation
-      leftArrow.style.pointerEvents = "auto";
-      rightArrow.style.pointerEvents = "auto";
-    }, 500); // Durée de l'animation CSS
-  }, 500); // Attend la fin de l'animation avant de changer le texte
-}
-
+//const textElement = document.createElement('div');
+//textElement.id = 'text-content';
+//textElement.style.position = 'absolute';
+//textElement.style.top = '80px';
+//textElement.style.width = '100%';
+//textElement.style.textAlign = 'center';
+//textElement.style.color = 'black';
+//textElement.style.fontSize = '24px';
+//textElement.style.transition = 'opacity 0.5s'; // Animation CSS pour un effet fondu
+//document.body.appendChild(textElement);
 
 // Fonction d'animation
 function animate() {
