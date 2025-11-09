@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Téléchargement — main.exe</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            align-items: center;
+            justify-content: center;
+            background: #f6f9fc;
+            color: #0b2545;
+        }
+        .card {
+            background: #fff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(13,38,77,0.08);
+            text-align: center;
+            max-width: 420px;
+            width: 90%;
+        }
+        h1 { margin: 0 0 8px; font-size: 1.25rem; }
+        p { margin: 0 0 16px; color: #385070; }
+        .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .btn, .link {
+            display: inline-block;
+            padding: 10px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            color: #fff;
+            background: #0a63ff;
+            transition: background .15s ease;
+        }
+        .link { background: #2d3748; }
+        .btn:hover { background: #0951d6; }
+        .link:hover { background: #222b33; }
+        .note { margin-top: 12px; font-size: .85rem; color: #6b7684; }
+    </style>
+</head>
+<body>
+    <div class="card" role="main">
+        <h1>Télécharger le programme</h1>
+        <p>Cliquez sur le bouton pour télécharger <strong>main.exe</strong>.</p>
+
+        <div class="actions">
+            <!-- Le fichier main.exe doit se trouver dans le même dossier que cette page -->
+            <a class="btn" href="main.exe" download="main.exe" aria-label="Télécharger main.exe">Télécharger main.exe</a>
+
+            <!-- Remplacez l'URL ci-dessous par celle de votre dépôt GitHub -->
+            <a class="link" href="https://github.com/rosignol08/revision_planifier" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir le dépôt GitHub">Voir le dépôt GitHub</a>
+        </div>
+
+        <!-- <p class="note">Remarque : le fichier main.exe doit être placé dans le même dossier que cette page pour que le téléchargement fonctionne.</p> -->
+    </div>
+</body>
+</html>
