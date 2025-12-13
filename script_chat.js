@@ -5,6 +5,12 @@ const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
 const statusMessage = document.getElementById('status-message');
 
+// S'assurer que 'marked' est disponible au chargement
+console.log("DEBUG: L'objet 'marked' est chargé :", typeof marked); 
+if (typeof marked === 'undefined') {
+    console.error("ERREUR CRITIQUE: La librairie marked.js n'est pas chargée !");
+}
+
 /**
  * Ajoute un nouveau message à la boîte de dialogue.
  * @param {string} text - Le contenu du message (potentiellement en Markdown).
@@ -15,20 +21,32 @@ function displayMessage(text, sender) {
     messageDiv.classList.add('message');
     messageDiv.classList.add(sender + '-message');
     
+    // CAS 1 : C'est un message de l'IA (AI)
     if (sender === 'ai') {
-        // C'est la ligne magique : convertir le Markdown en HTML
-        messageDiv.innerHTML = marked.parse(text); 
+        // --- DEBOGAGE MARKDOWN ---
+        console.log("DEBUG: Message AI (BRUT Markdown) :", text);
         
-        // Optionnel: Ajouter une classe spécifique pour styliser le Markdown
-        messageDiv.classList.add('ai-markdown'); 
-    } else {
-        // Pour les utilisateurs, on utilise textContent pour la sécurité
+        try {
+            // Conversion Markdown vers HTML
+            const htmlContent = marked.parse(text); 
+            console.log("DEBUG: Message AI (HTML généré) :", htmlContent);
+            
+            // Affichage du HTML
+            messageDiv.innerHTML = htmlContent; 
+            messageDiv.classList.add('ai-markdown'); 
+
+        } catch (e) {
+            console.error("ERREUR lors du parsing Markdown :", e);
+            messageDiv.textContent = "Erreur de formatage : " + text; // Afficher le brut en cas d'échec
+        }
+    } 
+    // CAS 2 : C'est un message de l'utilisateur (USER)
+    else {
+        console.log("DEBUG: Message Utilisateur :", text);
         messageDiv.textContent = text;
     }
     
     messagesBox.appendChild(messageDiv);
-    
-    // Scroller automatiquement vers le bas
     messagesBox.scrollTop = messagesBox.scrollHeight;
 }
 
@@ -39,25 +57,26 @@ async function sendMessage() {
     const prompt = userInput.value.trim();
     if (!prompt) return;
 
-    // 1. Désactiver l'interface et afficher le message utilisateur
-    userInput.value = ''; // Vider le champ
+    // 1. Pré-envoi
+    userInput.value = '';
     sendButton.disabled = true;
     userInput.disabled = true;
     statusMessage.textContent = 'Envoi du message...';
     displayMessage(prompt, 'user');
+    
+    console.log(`DEBUG: Envoi de la requête au serveur : ${API_URL}/chat/ avec le prompt : "${prompt}"`);
 
-    // 2. Préparer la requête POST
     const payload = {
         prompt: prompt,
         model: MODEL,
-        max_tokens: 3000,
+        max_tokens: 150,
         temperature: 0.7
     };
 
     try {
         statusMessage.textContent = 'Réflexion...';
         
-        // 3. Appel à l'API (Endpoint /chat/ du serveur)
+        // 3. Appel à l'API 
         const response = await fetch(`${API_URL}/chat/`, {
             method: 'POST',
             headers: {
@@ -69,31 +88,36 @@ async function sendMessage() {
         // 4. Traiter la réponse
         if (response.ok) {
             const data = await response.json();
-            // Assurez-vous que le chemin d'accès au contenu est correct
+            
+            // --- DEBOGAGE DE LA RÉPONSE SERVEUR ---
+            console.log("DEBUG: Réponse JSON du serveur :", data);
+            
             const content = data.message?.content || "Désolé, je n'ai pas pu obtenir de réponse.";
             
+            // --- DEBOGAGE DU CONTENU EXTRAIT ---
+            console.log("DEBUG: Contenu texte extrait (prêt pour Markdown) :", content);
+
             displayMessage(content, 'ai');
             statusMessage.textContent = 'Prêt.';
         } else {
+            console.error(`ERREUR SERVEUR: ${response.status} ${response.statusText}`);
             const errorText = `Erreur serveur: ${response.status} ${response.statusText}`;
             displayMessage(errorText, 'system');
             statusMessage.textContent = 'Erreur serveur.';
         }
 
     } catch (error) {
-        // 5. Gérer les erreurs de connexion
-        console.error('Erreur de connexion:', error);
+        console.error('ERREUR DE CONNEXION GLOBALE:', error);
         displayMessage(`Erreur de connexion: ${error.message}`, 'system');
         statusMessage.textContent = 'Erreur de connexion.';
     } finally {
-        // 6. Réactiver l'interface
         sendButton.disabled = false;
         userInput.disabled = false;
-        userInput.focus(); // Rendre le champ de saisie actif
+        userInput.focus();
     }
 }
 
-// Ajouter l'écouteur pour la touche Entrée (rend l'utilisation plus rapide)
+// Ajouter l'écouteur pour la touche Entrée
 userInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter' && !sendButton.disabled) {
         sendMessage();
