@@ -1,7 +1,9 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: #303030; /* Couleur de fond de votre client Python */
-    color: #f0f0f0;
+css body {
+    font-family: 'Arial', sans-serif;
+    background-color: #444444;
+    /* Couleur de fond plus proche de ChatGPT */
+    color: #ffffff;
+    /* Texte blanc */
     margin: 0;
     display: flex;
     justify-content: center;
@@ -12,16 +14,17 @@ body {
 #chat-container {
     width: 100%;
     max-width: 600px;
-    background-color: #1e1e1e;
+    background-color: #212121;
+    /* Couleur de fond plus sombre */
     border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
     display: flex;
     flex-direction: column;
     padding: 20px;
 }
 
 h1 {
-    color: #00bfff; /* Un bleu vif pour le titre */
+    color: #00bfff;
     text-align: center;
     margin-bottom: 20px;
 }
@@ -29,59 +32,69 @@ h1 {
 #messages-box {
     height: 400px;
     overflow-y: auto;
-    border: 1px solid #444;
+    border: 1px solid #555;
     padding: 15px;
     margin-bottom: 15px;
     border-radius: 5px;
     background-color: #252525;
+    cursor: pointer;
+    /* Ajout du curseur */
 }
 
 .message {
-    padding: 10px;
+    padding: 10px 15px;
     margin-bottom: 10px;
-    border-radius: 15px;
-    max-width: 80%;
+    border-radius: 10px;
+    max-width: 70%;
     word-wrap: break-word;
+    color: #d4d4d4;
+    /* Couleur du texte des messages */
 }
 
 .user-message {
-    background-color: #007bff; /* Bleu Utilisateur */
+    background-color: #4caf50;
+    /* Vert Utilisateur */
     color: white;
     margin-left: auto;
-    border-bottom-right-radius: 2px;
+    border-bottom-right-radius: 10px;
 }
 
 .ai-message {
-    background-color: #555; /* Gris AI */
+    background-color: #555555;
+    /* Gris plus foncé AI */
     color: white;
     margin-right: auto;
-    border-bottom-left-radius: 2px;
+    border-bottom-left-radius: 10px;
 }
 
 .system-message {
     text-align: center;
-    color: #aaa;
+    color: #999999;
     font-style: italic;
     font-size: 0.9em;
 }
 
 #input-area {
     display: flex;
+    align-items: flex-end;
+    /* Alignement vertical au bas */
 }
 
 #user-input {
     flex-grow: 1;
     padding: 10px;
-    border: 1px solid #444;
+    border: 1px solid #666;
     border-radius: 5px 0 0 5px;
     background-color: #333;
     color: white;
     font-size: 16px;
+    margin-right: 10px;
+    /* Espace entre l'input et le bouton */
 }
 
 #send-button {
     padding: 10px 15px;
-    background-color: #00bfff;
+    background-color: #4caf50;
     color: white;
     border: none;
     border-radius: 0 5px 5px 0;
@@ -90,11 +103,11 @@ h1 {
 }
 
 #send-button:hover {
-    background-color: #0099cc;
+    background-color: #388e3c;
 }
 
 #send-button:disabled {
-    background-color: #444;
+    background-color: #666;
     cursor: not-allowed;
 }
 
@@ -102,5 +115,42 @@ h1 {
     text-align: center;
     margin-top: 10px;
     font-size: 0.8em;
-    color: #aaa;
+    color: #999999;
+}
+
+/* Style pour les listes (ul, ol) dans les réponses AI */
+.ai-markdown ul, 
+.ai-markdown ol {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding-left: 20px;
+}
+
+/* Style pour les blocs de code (```...```) */
+.ai-markdown pre {
+    background-color: #383838;
+    color: #00ffaa; /* Couleur de code claire */
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto; /* Permet le scroll si le code est long */
+    margin-top: 10px;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+/* Style pour le code inline (`...`) */
+.ai-markdown code {
+    background-color: #444;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+/* Style pour les titres (H1, H2...) */
+.ai-markdown h1, .ai-markdown h2, .ai-markdown h3 {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    color: #00bfff;
+    border-bottom: 1px solid #444;
+    padding-bottom: 2px;
 }

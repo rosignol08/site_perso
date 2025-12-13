@@ -7,14 +7,25 @@ const statusMessage = document.getElementById('status-message');
 
 /**
  * Ajoute un nouveau message à la boîte de dialogue.
- * @param {string} text - Le contenu du message.
+ * @param {string} text - Le contenu du message (potentiellement en Markdown).
  * @param {string} sender - 'user' ou 'ai'.
  */
 function displayMessage(text, sender) {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message');
     messageDiv.classList.add(sender + '-message');
-    messageDiv.textContent = text;
+    
+    if (sender === 'ai') {
+        // C'est la ligne magique : convertir le Markdown en HTML
+        messageDiv.innerHTML = marked.parse(text); 
+        
+        // Optionnel: Ajouter une classe spécifique pour styliser le Markdown
+        messageDiv.classList.add('ai-markdown'); 
+    } else {
+        // Pour les utilisateurs, on utilise textContent pour la sécurité
+        messageDiv.textContent = text;
+    }
+    
     messagesBox.appendChild(messageDiv);
     
     // Scroller automatiquement vers le bas
