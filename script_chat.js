@@ -39,7 +39,7 @@ async function sendMessage() {
     const payload = {
         prompt: prompt,
         model: MODEL,
-        max_tokens: 150,
+        max_tokens: 3000,
         temperature: 0.7
     };
 
