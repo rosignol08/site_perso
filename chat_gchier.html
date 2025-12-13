@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat en Direct avec l'IA</title>
+    <link rel="stylesheet" href="style_chat.css">
+</head>
+<body>
+    <div id="chat-container">
+        <h1>💬 Assistant IA en Ligne</h1>
+        
+        <div id="messages-box">
+            <div class="message system-message">
+                Bienvenue ! Posez-moi une question.
+            </div>
+        </div>
+        
+        <div id="input-area">
+            <input type="text" id="user-input" placeholder="Écrivez votre message...">
+            <button id="send-button" onclick="sendMessage()">Envoyer</button>
+        </div>
+        
+        <p id="status-message">Prêt.</p>
+    </div>
+
+    <script src="script_chat.js"></script>
+</body>
+</html>

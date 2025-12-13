@@ -1,0 +1,106 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #303030; /* Couleur de fond de votre client Python */
+    color: #f0f0f0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#chat-container {
+    width: 100%;
+    max-width: 600px;
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+h1 {
+    color: #00bfff; /* Un bleu vif pour le titre */
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#messages-box {
+    height: 400px;
+    overflow-y: auto;
+    border: 1px solid #444;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    background-color: #252525;
+}
+
+.message {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 15px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.user-message {
+    background-color: #007bff; /* Bleu Utilisateur */
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 2px;
+}
+
+.ai-message {
+    background-color: #555; /* Gris AI */
+    color: white;
+    margin-right: auto;
+    border-bottom-left-radius: 2px;
+}
+
+.system-message {
+    text-align: center;
+    color: #aaa;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+#input-area {
+    display: flex;
+}
+
+#user-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 5px 0 0 5px;
+    background-color: #333;
+    color: white;
+    font-size: 16px;
+}
+
+#send-button {
+    padding: 10px 15px;
+    background-color: #00bfff;
+    color: white;
+    border: none;
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#send-button:hover {
+    background-color: #0099cc;
+}
+
+#send-button:disabled {
+    background-color: #444;
+    cursor: not-allowed;
+}
+
+#status-message {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.8em;
+    color: #aaa;
+}
