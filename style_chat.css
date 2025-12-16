@@ -62,9 +62,9 @@ h1 {
 
 .system-message {
     text-align: center;
-    color: #999999;
+    color: #fffdfd;
     font-style: italic;
-    font-size: 0.9em;
+    font-size: 1.9em;
 }
 
 #input-area {
