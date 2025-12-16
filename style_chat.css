@@ -1,188 +1,172 @@
+/* 1. DÉFINITION DES COULEURS (Variables) */
+:root {
+    /* Valeurs par défaut : MODE CLAIR */
+    --bg-main: #ffffff;
+    --bg-ai-message: #f7f7f8;
+    --bg-user-message: #ffffff;
+    --text-main: #374151;
+    --border-color: rgba(0,0,0,0.1);
+    --input-bg: #ffffff;
+    --input-border: rgba(0, 0, 0, 0.24);
+    --input-shadow: rgba(0,0,0,0.05);
+    --input-text: #374151;
+    --avatar-user: #7c3aed;
+    --avatar-ai: #10a37f;
+    --scroll-thumb: #c5c5d2;
+}
+
+/* 2. MODE SOMBRE (S'active automatiquement selon le système) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-main: #343541;
+        --bg-ai-message: #444654;
+        --bg-user-message: #343541;
+        --text-main: #ececf1;
+        --border-color: rgba(0,0,0,0.1);
+        --input-bg: #40414f;
+        --input-border: rgba(32,33,35,0.5);
+        --input-shadow: rgba(0,0,0,0.2);
+        --input-text: #ffffff;
+        --scroll-thumb: #565869;
+    }
+}
+
+/* 3. BASE DU DOCUMENT */
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #444444;
-    color: #ffffff;
+    font-family: 'Söhne', 'ui-sans-serif', 'system-ui', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
     margin: 0;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+    flex-direction: column;
+    height: 100vh;
+    transition: background-color 0.3s ease;
 }
 
 #chat-container {
-    width: 100%;
-    max-width: 600px; /* Taille maximale sur les petits écrans */
-    background-color: #212121;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    height: 100%;
+    width: 100%;
 }
 
-h1 {
-    color: #00bfff;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
+/* Zone des messages */
 #messages-box {
-    height: 400px;
+    flex: 1;
     overflow-y: auto;
-    border: 1px solid #555;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 5px;
-    background-color: #252525;
-    cursor: pointer;
+    padding-bottom: 150px;
+    background-color: var(--bg-main);
+    scroll-behavior: smooth;
 }
 
-.message {
-    padding: 10px 15px;
-    margin-bottom: 10px;
+/* Scrollbar Style */
+#messages-box::-webkit-scrollbar { width: 8px; }
+#messages-box::-webkit-scrollbar-thumb {
+    background-color: var(--scroll-thumb);
     border-radius: 10px;
-    max-width: 70%;
-    word-wrap: break-word;
-    color: #d4d4d4;
 }
 
-.user-message {
-    background-color: #4caf50;
-    color: white;
-    margin-left: auto;
-    border-bottom-right-radius: 10px;
-}
-
-.ai-message {
-    background-color: #555555;
-    color: white;
-    margin-right: auto;
-    border-bottom-left-radius: 10px;
-}
-
-.system-message {
-    text-align: center;
-    color: #fffdfd;
-    font-style: italic;
-    font-size: 1.9em;
-}
-
-#input-area {
+/* 4. DESIGN DES MESSAGES */
+.message {
+    width: 100%;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
-    align-items: flex-end;
+    justify-content: center;
+    padding: 24px 0;
+}
+
+.user-message { background-color: var(--bg-user-message); }
+.ai-message { background-color: var(--bg-ai-message); }
+
+.message-content {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    max-width: 48rem;
+    padding: 0 20px;
+}
+
+/* Avatars */
+.avatar {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+}
+.user-message .avatar { background-color: var(--avatar-user); }
+.ai-message .avatar { background-color: var(--avatar-ai); }
+
+/* Texte */
+.text {
+    flex-grow: 1;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+}
+
+/* 5. ZONE DE SAISIE (FLOTTANTE) */
+#input-area {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    /* Gradient pour masquer les messages qui passent dessous */
+    background: linear-gradient(180deg, transparent, var(--bg-main) 50%);
+    padding: 20px 0 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.input-wrapper {
+    position: relative;
+    width: 90%;
+    max-width: 48rem;
+    background-color: var(--input-bg);
+    border: 2px solid var(--input-border);
+    border-radius: 12px;
+    box-shadow: 0 0 15px var(--input-shadow);
+    display: flex;
+    align-items: center;
 }
 
 #user-input {
-    flex-grow: 1;
-    padding: 10px;
-    border: 1px solid #666;
-    border-radius: 5px 0 0 5px;
-    background-color: #333;
-    color: white;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 14px 45px 14px 16px;
+    color: var(--input-text);
     font-size: 16px;
-    margin-right: 10px;
+    outline: none;
 }
 
 #send-button {
-    padding: 10px 15px;
-    background-color: #4caf50;
-    color: white;
+    position: absolute;
+    right: 10px;
+    background: transparent;
     border: none;
-    border-radius: 0 5px 5px 0;
+    color: #acacbe;
     cursor: pointer;
-    transition: background-color 0.3s;
+    padding: 5px;
+    transition: all 0.2s;
 }
 
-#send-button:hover {
-    background-color: #388e3c;
+#send-button:hover:not(:disabled) {
+    background-color: var(--border-color);
+    color: var(--text-main);
 }
 
-#send-button:disabled {
-    background-color: #666;
-    cursor: not-allowed;
-}
-
-#status-message {
-    text-align: center;
-    margin-top: 10px;
-    font-size: 0.8em;
-    color: #999999;
-}
-
-/* Style pour les listes (ul, ol) dans les réponses AI */
-.ai-markdown ul, .ai-markdown ol {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    padding-left: 20px;
-}
-
-/* Style pour les blocs de code (```...```) */
+/* Markdown Specifics */
 .ai-markdown pre {
-    background-color: #383838;
-    color: #00ffaa;
-    padding: 10px;
-    border-radius: 5px;
+    background-color: #000000;
+    color: #ffffff;
+    padding: 15px;
+    border-radius: 6px;
     overflow-x: auto;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    font-size: 0.9em;
-}
-
-/* Style pour le code inline (`...`) */
-.ai-markdown code {
-    background-color: #444;
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-family: monospace;
-}
-
-/* Style pour les titres (H1, H2...) */
-.ai-markdown h1, .ai-markdown h2, .ai-markdown h3 {
-    margin-top: 10px;
-    margin-bottom: 5px;
-    color: #00bfff;
-    border-bottom: 1px solid #444;
-    padding-bottom: 2px;
-}
-
-/* Media Queries */
-
-@media (max-width: 600px) {
-    #chat-container {
-        max-width: 90%; /* Adapte la largeur maximale sur les petits écrans */
-    }
-    #user-input {
-        font-size: 14px;
-    }
-}
-
-@media (min-width: 600px) and (max-width: 992px) {
-    #chat-container {
-        max-width: 70%;
-    }
-}
-
-@media (min-width: 992px) {
-    #chat-container {
-        max-width: 90%;
-    }
-}
-
-.ai-markdown.thinking {
-    display: inline-block;
-    padding-right: 5px; /* Ajoute un espace à droite */
-}
-
-.ai-markdown.thinking::after {
-    content: ".";
-    animation: blink 1s steps(5, start) infinite;
-}
-
-@keyframes blink {
-    from {
-        content: ".";
-    }
-    to {
-        content: "";
-    }
 }

@@ -3,28 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat en Direct avec l'IA</title>
-    <link rel="stylesheet" href="style_chat.css?v=1.0.1"> <!-- augmenter la valeur à chaque update-->
+    <title>YafoyeGPT</title>
+    <link rel="stylesheet" href="style_chat.css?v=2.0.1"> <!-- augmenter la valeur à chaque update-->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div id="chat-container">
-        <h1>Yafoye gpt</h1>
         
         <div id="messages-box">
-            <div class="message system-message">
-                Salut princesse pose moi ta question.
+            <div class="message ai-message">
+                <div class="message-content">
+                    <div class="avatar">Y</div>
+                    <div class="text">Salut princesse, pose-moi ta question.</div>
+                </div>
             </div>
         </div>
         
         <div id="input-area">
-            <input type="text" id="user-input" placeholder="Écrivez votre message...">
-            <button id="send-button" onclick="sendMessage()">Envoyer</button>
+            <div class="input-wrapper">
+                <input type="text" id="user-input" placeholder="Envoyer un message..." autocomplete="off">
+                <button id="send-button" onclick="sendMessage()" title="Envoyer le message" aria-label="Envoyer le message"></button>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+            <p id="status-message"></p>
         </div>
-        
-        <p id="status-message">Prêt.</p>
     </div>
 
-    <script src="script_chat.js?v=1.0.1"></script> <!-- augmenter la valeur à chaque update-->
+    <script src="script_chat.js?v=2.0.1"></script>
 </body>
 </html>
+

@@ -1,5 +1,6 @@
-const API_URL = "https://robot.romaric.site"; // L'URL de votre serveur
-const MODEL = "gemma3:4b";
+const API_URL = "https://robot.romaric.site"; // L'URL du serveur
+//const MODEL = "gemma3:4b";
+const MODEL = "gemma3:1b";
 const messagesBox = document.getElementById('messages-box');
 const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
@@ -18,37 +19,48 @@ if (typeof marked === 'undefined') {
  */
 function displayMessage(text, sender) {
     const messageDiv = document.createElement('div');
-    messageDiv.classList.add('message');
-    messageDiv.classList.add(sender + '-message');
+    // Ajoute les classes : 'message' et 'user-message' ou 'ai-message'
+    messageDiv.className = `message ${sender}-message`;
 
-    // CAS 1 : C'est un message de l'IA (AI)
+    // 1. Déterminer l'avatar (Lettre ou Icône)
+    // ChatGPT utilise des carrés de couleur avec une icône ou une lettre
+    const avatarLabel = sender === 'ai' ? 'IA' : 'U'; 
+
+    // 2. Préparer le contenu HTML du texte
+    let contentHtml = '';
+    
     if (sender === 'ai') {
-        // --- DEBOGAGE MARKDOWN ---
-        console.log("DEBUG: Message AI (BRUT Markdown) :", text);
-
         try {
-            // Conversion Markdown vers HTML
-            const htmlContent = marked.parse(text);
-
-            console.log("DEBUG: Message AI (HTML généré) :", htmlContent);
-
-            // Affichage du HTML
-            messageDiv.innerHTML = htmlContent;
-
-            messageDiv.classList.add('ai-markdown');
+            // Conversion Markdown pour l'IA
+            contentHtml = marked.parse(text);
         } catch (e) {
-            console.error("ERREUR lors du parsing Markdown :", e);
-            messageDiv.textContent = "Erreur de formatage : " + text; // Afficher le brut en cas d'échec
+            console.error("Erreur Markdown:", e);
+            contentHtml = text;
         }
-    }
-    // CAS 2 : C'est un message de l'utilisateur (USER)
-    else {
-        console.log("DEBUG: Message Utilisateur :", text);
-        messageDiv.textContent = text;
+    } else {
+        // Pour l'utilisateur, on évite le HTML brut pour la sécurité, 
+        // mais on garde les sauts de ligne
+        contentHtml = text.replace(/\n/g, '<br>');
     }
 
+    // 3. Construction du HTML interne (Structure ChatGPT)
+    // C'est ici que la magie visuelle opère : une div pour le contenu centré qui contient Avatar + Texte
+    messageDiv.innerHTML = `
+        <div class="message-content">
+            <div class="avatar">${avatarLabel}</div>
+            <div class="text ai-markdown">${contentHtml}</div>
+        </div>
+    `;
+
+    // 4. Ajout au DOM
     messagesBox.appendChild(messageDiv);
+    
+    // Scroll automatique vers le bas (sur le document ou la box selon le CSS)
+    // Avec le style ChatGPT, c'est souvent le 'messagesBox' ou 'window' qui scroll.
+    // Ici on assure le scroll sur la box :
     messagesBox.scrollTop = messagesBox.scrollHeight;
+    // Et aussi sur la fenêtre principale au cas où :
+    window.scrollTo(0, document.body.scrollHeight);
 }
 
 /**
@@ -101,7 +113,7 @@ async function sendMessage() {
             // --- DEBOGAGE DU CONTENU EXTRAIT ---
             console.log("DEBUG: Contenu texte extrait (prêt pour Markdown) :", content);
 
-            displayMessage(content, 'ai');
+            displayMessage(content, 'ai');//affiche le message de l'IA
             statusMessage.textContent = 'Prêt.';
         } else {
             console.error(`ERREUR SERVEUR: ${response.status} ${response.statusText}`);
@@ -120,7 +132,36 @@ async function sendMessage() {
     }
 }
 
-// Ajouter l'écouteur pour la touche Entrée
+function appendMessage(sender, text) {
+    const messagesBox = document.getElementById('messages-box');
+    
+    // Créer la div principale
+    const messageDiv = document.createElement('div');
+    // Définir la classe (user-message ou ai-message)
+    const className = sender === 'user' ? 'user-message' : 'ai-message';
+    messageDiv.className = `message ${className}`;
+
+    // Définir l'avatar (Initiale ou icône)
+    const avatarLabel = sender === 'user' ? 'U' : 'IA'; // Tu peux mettre une balise <img> ici
+
+    // Convertir le markdown si c'est l'IA
+    const contentHtml = sender === 'user' ? text : marked.parse(text);
+
+    // Structure HTML interne style ChatGPT
+    messageDiv.innerHTML = `
+        <div class="message-content">
+            <div class="avatar">${avatarLabel}</div>
+            <div class="text ai-markdown">${contentHtml}</div>
+        </div>
+    `;
+
+    messagesBox.appendChild(messageDiv);
+    
+    // Auto-scroll vers le bas
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+}
+
+// l'écouteur pour la touche Entrée
 userInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter' && !sendButton.disabled) {
         sendMessage();
