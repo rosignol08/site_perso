@@ -170,3 +170,22 @@ body {
     border-radius: 6px;
     overflow-x: auto;
 }
+
+.model-toggle-btn {
+    padding: 8px 16px;
+    background-color: #444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 10px;
+}
+
+.model-toggle-btn:hover {
+    background-color: #555;
+}
+
+.model-toggle-btn:active {
+    background-color: #666;
+}

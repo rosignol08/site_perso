@@ -1,10 +1,30 @@
 const API_URL = "https://robot.romaric.site"; // L'URL du serveur
-//const MODEL = "gemma3:4b";
+const MODEL2 = "gemma3:4b";
 const MODEL = "gemma3:1b";
 const messagesBox = document.getElementById('messages-box');
 const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
 const statusMessage = document.getElementById('status-message');
+const modelToggle = document.getElementById('model-toggle');
+
+let currentModel = MODEL;
+
+function toggleModel() {
+    currentModel = currentModel === MODEL ? MODEL2 : MODEL;
+    updateModelButton();
+    displayMessage(`Modèle changé vers: ${currentModel}`, 'system');
+}
+
+/**
+ * Met à jour le texte du bouton
+ */
+function updateModelButton() {
+    if (modelToggle) {
+        modelToggle.textContent = `Modèle: ${currentModel}`;
+        modelToggle.title = `Cliquez pour changer (${currentModel === MODEL ? MODEL2 : MODEL})`;
+    }
+}
+
 
 // S'assurer que 'marked' est disponible au chargement
 console.log("DEBUG: L'objet 'marked' est chargé :", typeof marked);
@@ -84,7 +104,7 @@ async function sendMessage() {
     console.log("DEBUG: Prompt final envoyé :", finalPrompt);
     const payload = {
         prompt: finalPrompt,
-        model: MODEL,
+        model: currentModel,
         max_tokens: 3000,
         temperature: 0.7
     };
@@ -160,6 +180,15 @@ function appendMessage(sender, text) {
     // Auto-scroll vers le bas
     messagesBox.scrollTop = messagesBox.scrollHeight;
 }
+
+if (modelToggle) {
+    modelToggle.addEventListener('click', toggleModel);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    userInput.focus();
+    updateModelButton();
+});
 
 // l'écouteur pour la touche Entrée
 userInput.addEventListener('keypress', (event) => {
