@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mon monde Three.js</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <!-- CDN Three.js (module) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/examples/": "https://unpkg.com/three@0.160.0/examples/"
+      }
+    }
+  </script>
+  
+  <!-- Charger uniquement World.js qui gère tout -->
+  <script type="module" src="./World.js"></script>
+</body>
+</html>
