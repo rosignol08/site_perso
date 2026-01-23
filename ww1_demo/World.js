@@ -18,6 +18,9 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import Terrain from './Terrain.js';
 import ArtillerySystem from './ArtillerySystem.js';
+import Vegetation from './Vegetation.js';
+import UnitSystem from './UnitSystem.js';
+
 
 // Create scene
 const scene = new THREE.Scene();
@@ -31,9 +34,22 @@ const camera = new THREE.PerspectiveCamera(
   1000
 );
 camera.position.set(0, 50, 100);
-
+const audiolistener = new THREE.AudioListener();
+camera.add(audiolistener);
 const terrain = new Terrain(scene);
-const artillerySystem = new ArtillerySystem(scene, terrain);
+const vegetation = new Vegetation(scene);
+const artillery = new ArtillerySystem(scene,audiolistener,terrain);
+const unitSystem = new UnitSystem(scene, terrain);
+
+//escouade de 5 soldats
+for(let i = 0; i < 5; i++) {
+    // Position aléatoire un peu groupée
+    unitSystem.spawnUnit(-40 + Math.random() * 10, -40 + Math.random() * 10);
+}
+for(let i = 0; i < 5; i++) {
+    // Position aléatoire un peu groupée
+    artillery.spawnUnit(-40 + Math.random() * 10, -40 + Math.random() * 10);
+}
 
 // Create renderer
 const renderer = new THREE.WebGLRenderer();
@@ -52,6 +68,10 @@ const controls = new PointerLockControls(camera, document.body);
 
 // Cliquer pour activer les contrôles
 document.addEventListener('click', () => {
+  // Résumer l'AudioContext pour autoriser le son (requis par les navigateurs)
+  if (audiolistener.context.state === 'suspended') {
+    audiolistener.context.resume();
+  }
   controls.lock();
 });
 
@@ -64,7 +84,6 @@ const moveState = {
   up: false,
   down: false
 };
-
 document.addEventListener('keydown', (event) => {
   switch (event.code) {
     case 'KeyW': moveState.forward = true; break;
@@ -75,7 +94,6 @@ document.addEventListener('keydown', (event) => {
     case 'ShiftLeft': moveState.down = true; break;
   }
 });
-
 document.addEventListener('keyup', (event) => {
   switch (event.code) {
     case 'KeyW': moveState.forward = false; break;
@@ -91,28 +109,45 @@ document.addEventListener('keyup', (event) => {
 setTimeout(() => {
   const startPos = new THREE.Vector3(-50, 0, 0);
   const targetPos = new THREE.Vector3(50, 0, 0);
-  artillerySystem.fire(startPos, targetPos);
-}, 1000);
+  //artillery.fire(startPos, targetPos);
+}, 5000);
 
 function animate() {
-  requestAnimationFrame(animate);
+    const deltaTime = 0.016; // Ou via un THREE.Clock
+    requestAnimationFrame(animate);
+    const moveSpeed = 0.5;
+    if (moveState.forward) controls.moveForward(moveSpeed);
+    if (moveState.backward) controls.moveForward(-moveSpeed);
+    if (moveState.left) controls.moveRight(-moveSpeed);
+    if (moveState.right) controls.moveRight(moveSpeed);
+    if (moveState.up) camera.position.y += moveSpeed;
+    if (moveState.down) camera.position.y -= moveSpeed;
   
-  // AJOUT: Déplacer la caméra selon les touches
-  const moveSpeed = 0.5;
-  if (moveState.forward) controls.moveForward(moveSpeed);
-  if (moveState.backward) controls.moveForward(-moveSpeed);
-  if (moveState.left) controls.moveRight(-moveSpeed);
-  if (moveState.right) controls.moveRight(moveSpeed);
-  if (moveState.up) camera.position.y += moveSpeed;
-  if (moveState.down) camera.position.y -= moveSpeed;
-  
-  // Laisser ArtillerySystem gérer TOUT (mouvement + collision)
-  artillerySystem.update(0.016);
-  
-  renderer.render(scene, camera);
+    // 1. Calculer la physique
+    artillery.update(deltaTime);
+    unitSystem.update(deltaTime);
+
+    // 2. Gérer les conséquences des impacts
+    // On récupère la liste des endroits où ça a explosé cette frame
+    const explosions = artillery.impacts; 
+
+    if (explosions.length > 0) {
+        // Le chef d'orchestre distribue l'information
+        
+        // "Terrain, fais des trous !"
+        explosions.forEach(pos => terrain.createCrater(pos));
+        
+        // "Arbres, tombez si vous êtes touchés !"
+        vegetation.handleExplosions(explosions);
+        
+        // "Audio, joue le son !"
+        //explosions.forEach(pos => artillery.playExplosionSound(pos));
+    }
+
+    renderer.render(scene, camera);
 }
 
 // Start animation loop
 animate();
 
-export { scene, camera, terrain, artillerySystem };
+export { scene, camera, terrain, artillery, vegetation };
