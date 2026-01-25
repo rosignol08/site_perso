@@ -18,56 +18,51 @@ class ArtillerySystem {
         this.shells.push(obus);
         this.scene.add(obus);
     }
-    spawnUnit(x, z) {
+
+    spawnUnit(x, z, equipe) {
         // On spawn à une hauteur arbitraire (ex: 50), le raycast le placera au sol à la frame 1
         const startPos = new THREE.Vector3(x, 50, z);
-        const unit = new ArtilleryUnit(this.scene, startPos, this);
+        const unit = new ArtilleryUnit(this.scene, startPos, this, equipe);
 
-        // Donnons-leur une cible aléatoire pour tester tout de suite
-        const randomTarget = new THREE.Vector3(
-            (Math.random() - 0.5) * 80,
-            0,
-            (Math.random() - 0.5) * 80,
+        // IA Basique : Avancer vers le bord de la map de son côté
+        // Si equipe 0 (à gauche) -> avance vers x négatif (bord gauche)
+        // Si equipe 1 (à droite) -> avance vers x positif (bord droit)
+        const targetX = equipe === 0 ? x - 30 : x + 30;
+
+        unit.moveTo(
+            new THREE.Vector3(
+                targetX,
+                0,
+                z, // Garde la même position z (avance tout droit)
+            ),
         );
-        unit.setTarget(randomTarget);
 
         this.units.push(unit);
     }
 
     update(deltaTime) {
+        this.impacts = []; // On vide la liste des impacts précédents
         // 1. Mettre à jour les unités d'artillerie (canons)
         this.units.forEach((unit) => {
-            // IMPORTANT : On passe le mesh du terrain à l'unité pour qu'elle calcule sa hauteur
-            unit.update(deltaTime, this.terrain.mesh);
-            if (unit.target == null && unit.peut_tirer) {
-                unit.setTarget(
-                    new THREE.Vector3(
-                        (Math.random() - 0.5) * 80,
-                        0,
-                        (Math.random() - 0.5) * 80,
-                    ),
-                );
+            if (unit.Mort) unit.update(deltaTime, this.terrain.mesh);
+            // Donner une cible si il n'en a pas
+            if (!unit.targetUnit) {
+                unit.targetUnit = this.findNearestEnemy(unit);
             }
+            //console.log(unit.targetUnit);
+            unit.update(deltaTime, this.terrain.mesh);
         });
-
-        // 2. Mettre à jour les obus en vol
-        this.impacts = []; // On vide la liste des impacts précédents
 
         for (let i = this.shells.length - 1; i >= 0; i--) {
             const obus = this.shells[i];
-
-            // Appliquer la physique
             this.appliqueVelocite(obus, deltaTime);
-
+            // Collision Sol
+            // Amélioration : Utiliser Raycaster pour collision précise avec le terrain déformé
+            // Sinon obus.position.y <= 0 est "ok" pour débuter mais imprécis si cratère
             if (obus.position.y <= 0) {
-                // Au lieu de modifier le terrain ici, on note juste l'impact
-                this.impacts.push(obus.position.clone());
-
+                this.createExplosion(obus.position);
                 this.scene.remove(obus);
                 this.shells.splice(i, 1);
-
-                // Jouer le son d'explosion
-                this.playExplosionSound(obus.position);
             }
         }
     }
@@ -108,6 +103,52 @@ class ArtillerySystem {
             };
         });
     }
+    findNearestEnemy(myFormUnit) {
+      let nearest = null;
+      let minDist = Infinity;
+
+      this.units.forEach(otherUnit => {
+          if (otherUnit === myFormUnit) return; // Pas moi-même
+          if (otherUnit.equipe === myFormUnit.equipe) return; // Pas un allié
+          if (otherUnit.Mort) return; // Pas un mort
+        
+          const dist = myFormUnit.mesh.position.distanceTo(otherUnit.mesh.position);
+          if (dist < minDist) {
+              minDist = dist;
+              nearest = otherUnit;
+          }
+      });
+      console.log("cible trouvee :", nearest.mesh.position);
+      return nearest; // Retourner l'unité entière pour accéder à sa position via nearest.mesh.position
+  }
+  createExplosion(position) {
+      // 1. Effet visuel et sonore
+      this.playExplosionSound(position);
+      this.impacts.push(position.clone()); // Pour le World.js qui gère le terrain
+
+      // 2. Dégâts de zone (Blast Radius)
+      const explosionRadius = 15; // Rayon de dégats
+      
+      this.units.forEach(unit => {
+          if (unit.Mort){
+            ////on retire l'unite des unité existantes
+            //const index = this.units.indexOf(unit);
+            //if (index > -1) {
+            //    this.units.splice(index, 1);
+            //}
+            return;
+          }
+          
+          const dist = position.distanceTo(unit.mesh.position);
+          
+          if (dist < explosionRadius) {
+              // Plus on est près, plus on a mal
+              const damage = Math.floor((1 - (dist / explosionRadius)) * 100);
+              console.log(`Unité touchée ! Dégats: ${damage}`);
+              unit.takeDamage(damage);
+          }
+      });
+  }
 }
 
 export default ArtillerySystem;

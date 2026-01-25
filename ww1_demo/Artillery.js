@@ -8,15 +8,22 @@ class ArtilleryUnit {
         this.artillerySystem = artillerySystem;
         this.mesh = new THREE.Group();
         this.target = new THREE.Vector3();
-        this.distance_max = 20000;
-        this.rechargement = 5; //rechargement en secondes
+        this.distance_max = 2000; // 200m de portée max
+        this.rechargement = 0; //rechargement en secondes
+        this.tempsEntreTirs = 3;
         this.peut_tirer = true;
         this.equipe = equipe;
-        this.vie = 100;
+        this.vie = 10;
         this.Mort = false;
+        this.destination = null; // Où je veux aller (Mouvement)
+        this.targetUnit = null;  // Qui je veux tuer (Ennemi)
+        
+        this.raycaster = new THREE.Raycaster();
+        this.downVector = new THREE.Vector3(0, -1, 0);
+        this._tempVec = new THREE.Vector3();
         
         // Canon de la première guerre mondiale
-        const teamColor = this.team === 0 ? 0x0000FF : 0xFF0000; // Bleu vs Rouge
+        const teamColor = this.equipe === 0 ? 0x0000FF : 0xFF0000; // Bleu vs Rouge
         // Affût (base en bois)
         const affutGeo = new THREE.BoxGeometry(1.5, 0.3, 2);
         const affutMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Brun bois
@@ -63,7 +70,7 @@ class ArtilleryUnit {
         scene.add(this.mesh);
 
         // 2. Propriétés de déplacement
-        this.speed = 2 + Math.random(); // Vitesse un peu aléatoire
+        this.speed = 5 + Math.random(); // Vitesse un peu aléatoire
         this.target = null;
         
         // Outil pour détecter le sol
@@ -77,12 +84,13 @@ class ArtilleryUnit {
 
     fire(startPos, targetPos) {
         
-        const dispersion = 5; 
+        const dispersion = Math.sqrt(((targetPos.x - startPos.x)**2) + ((targetPos.y - startPos.y)**2) +((targetPos.z - startPos.z)**2) ); //plus la cible est loin, plus la dispersion est grande
+        console.log("startPos", startPos , " target ",targetPos, "dispertion", dispersion);
         const noisyTarget = targetPos.clone();
         noisyTarget.x += (Math.random() - 0.5) * dispersion;
         noisyTarget.z += (Math.random() - 0.5) * dispersion;
-
-        const geometry = new THREE.SphereGeometry(15, 32, 16);
+        console.log("Tir vers ", noisyTarget.x, noisyTarget.z, "aulieu de ", targetPos.x, targetPos.z, "avec dispersion de ", dispersion);
+        const geometry = new THREE.SphereGeometry(1, 2, 6);
         const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
         const obus = new THREE.Mesh(geometry, material);
         obus.position.copy(startPos);
@@ -114,48 +122,50 @@ class ArtilleryUnit {
     }
 
     update(deltaTime, terrainMesh) {
-        if (this.Mort) return;
+        if (this.Mort){this.updateHeightOnTerrain(terrainMesh); return;}
         //console.log("debug");
+        const oldPos = this.mesh.position.clone();
         this.updateHeightOnTerrain(terrainMesh);
-        if (!this.target) return;
+        
         // 2. Gestion du Déplacement (Si on a une destination)
         if (this.destination) {
-            const direction = new THREE.Vector3().subVectors(this.destination, this.mesh.position);
-            direction.y = 0; // On reste à plat
+            //const direction = new THREE.Vector3().subVectors(this.destination, this.mesh.position);
+            //direction.y = 0; // On reste à plat
+            this._tempVec.copy(this.destination).sub(this.mesh.position);
+            this._tempVec.y = 0;
 
-            if (direction.length() > 1) {
-                direction.normalize();
-                this.mesh.position.addScaledVector(direction, this.speed * deltaTime);
+            if (this._tempVec.length() > 1) {
+                this._tempVec.normalize();
+                this.mesh.position.addScaledVector(this._tempVec, this.speed * deltaTime);
                 this.mesh.lookAt(this.destination.x, this.mesh.position.y, this.destination.z);
             } else {
                 this.destination = null; // Arrivé !
             }
         }
+        //const hasMoved = Math.abs(this.mesh.position.x - oldPos.x) > 0.01 || Math.abs(this.mesh.position.z - oldPos.z) > 0.01;
+        //if (hasMoved) {
+        //    this.updateHeightOnTerrain(terrainMesh);
+        //}
         // 3. Gestion du Combat (Si on n'a pas de destination, on cherche à tirer)
         if (!this.destination) {
             this.rechargement -= deltaTime;
 
             // Si on a une cible et qu'on peut tirer
-            if (this.targetUnit && !this.targetUnit.isDead && this.rechargement <= 0) {
-                // On se tourne vers l'ennemi
-                this.mesh.lookAt(this.targetUnit.mesh.position.x, this.mesh.position.y, this.targetUnit.mesh.position.z);
+            if (this.targetUnit && this.targetUnit.mesh && !this.targetUnit.Mort && this.rechargement <= 0) {
+                // Vérifier la distance
+                const distance = this.mesh.position.distanceTo(this.targetUnit.mesh.position);
                 
-                // FEU !
-                this.fire(this.mesh.position, this.targetUnit.mesh.position);
-                this.rechargement = this.tempsEntreTirs;
+                if (distance <= this.distance_max) {
+                    // On se tourne vers l'ennemi
+                    this.mesh.lookAt(this.targetUnit.mesh.position.x, this.mesh.position.y, this.targetUnit.mesh.position.z);
+                    
+                    // FEU !
+                    this.fire(this.mesh.position, this.targetUnit.mesh.position);
+                    this.rechargement = this.tempsEntreTirs;
+                }
             }
         }
     
-
-        //direction.normalize();
-        //// 2. Avancer
-        //this.mesh.position.addScaledVector(direction, this.speed * deltaTime);
-        //// 3. Regarder la cible
-        //this.mesh.lookAt(this.target.x, this.mesh.position.y, this.target.z);
-
-        // --- B. Gestion de la Hauteur (Y) ---
-        
-        
     }
 
     updateHeightOnTerrain(terrainMesh) {
@@ -175,21 +185,21 @@ class ArtilleryUnit {
         }
     }
     takeDamage(amount) {
-        this.hp -= amount;
+        this.vie -= amount;
         // Petit effet visuel : Flash rouge (optionnel)
-        this.mesh.children.forEach(c => c.material.color.setHex(0xFFFFFF));
-        setTimeout(() => {
-             // Remettre la couleur d'origine est complexe ici, simplifions :
-             // Si mort -> Noir
-             if(this.hp <= 0) this.die();
-        }, 100);
+        //this.mesh.children.forEach(c => c.material.color.setHex(0xFFFFFF));
+        //setTimeout(() => {
+        //     // Remettre la couleur d'origine est complexe ici, simplifions :
+        //     // Si mort -> Noir
+        //     if(this.vie <= 0) this.die();
+        //}, 100);
 
-        if (this.hp <= 0) this.die();
+        if (this.vie <= 0) this.die();
     }
 
     die() {
-        if(this.isDead) return;
-        this.isDead = true;
+        if(this.Mort) return;
+        this.Mort = true;
         console.log("Unité détruite !");
         
         // L'unité devient noire et fume (ou disparait)
