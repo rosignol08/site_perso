@@ -82,54 +82,48 @@ class ConstructionManager {
 
     assignTask(unitPosition) {
         let bestTask = null;
+        let maxScore = -Infinity; // On change la logique : on cherche le SCORE MAX
 
-        // On veut prioriser les structures qui sont le plus "en avant" sur le front.
-        // Si je suis Bleu (Team 0), je veux les X les plus GRANDS.
-        // Si je suis Rouge (Team 1), je veux les X les plus PETITS.
-        const frontDirection = (this.team === 0) ? 1 : -1;
-
-        // Fonction de score : Plus le score est haut, plus la tache est prioritaire.
-        // Le score est basé sur la position X (avancée)
-        const calculateScore = (structure) => {
-            // Position X pondérée par la direction de l'équipe
-            return structure.startPos.x * frontDirection;
-        };
-
-        // 1. Lister toutes les tâches possibles
-        let potentialTasks = [];
+        // Direction du front (+1 ou -1)
+        const frontDir = (this.team === 0) ? 1 : -1;
 
         for (const structure of this.blueprints) {
-            // A. Tâche de CONSTRUCTION (Priorité haute)
+            
+            // Calculer à quel point cette structure est "au front"
+            // Plus X est grand (pour les bleus), plus c'est le front.
+            const forwardScore = structure.startPos.x * frontDir; 
+            const dist = unitPosition.distanceTo(structure.startPos);
+
+            // --- SCORE DE TACHE ---
+            let score = 0;
+
+            // 1. TACHE DE CONSTRUCTION (Priorité ABSOLUE)
             if (structure.needsBuilders()) {
-                // On ajoute un bonus artificiel (+1000) pour que la construction passe avant la défense
-                potentialTasks.push({ 
-                    type: 'BUILD', 
-                    target: structure, 
-                    score: calculateScore(structure) + 1000 
-                });
+                // Base : 10 000 points (Immense bonus)
+                // + Bonus de Front : On préfère construire devant (x10)
+                // - Malus de Distance : On préfère ce qui est près (mais le bonus 10k écrase tout)
+                score = 10000 + (forwardScore * 5) - (dist * 0.5);
+                
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestTask = { type: 'BUILD', target: structure };
+                }
             }
-            // B. Tâche de DÉFENSE (Seulement si fini et pas plein)
+            
+            // 2. TACHE DE DEFENSE (Seulement si on a rien de mieux à faire)
             else if (structure.isFinished && !structure.isFull()) {
-                potentialTasks.push({ 
-                    type: 'DEFEND', 
-                    target: structure, 
-                    score: calculateScore(structure) 
-                });
+                // Base : 100 points
+                // On veut défendre le plus en avant possible absolument
+                score = 100 + (forwardScore * 10) - dist;
+
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestTask = { type: 'DEFEND', target: structure };
+                }
             }
         }
 
-        // 2. Trier les tâches : Score le plus élevé en premier (Le plus au front)
-        potentialTasks.sort((a, b) => b.score - a.score);
-
-        // 3. Retourner la meilleure
-        if (potentialTasks.length > 0) {
-            // Petite subtilité : Si le soldat est déjà très loin derrière, 
-            // on ne veut pas forcément qu'il traverse TOUTE la map pour le front immédiat s'il y a un chantier juste à côté.
-            // Mais pour ta demande "qu'ils avancent", on prend juste le premier de la liste.
-            return potentialTasks[0];
-        }
-
-        return null;
+        return bestTask;
     }
 
     orderGlobalCharge() {

@@ -218,118 +218,133 @@ class Unit {
     }
 
 behaviorDefend(deltaTime) {
-        // C'est ta fonction existante, MAIS on s'assure qu'ils changent de place
-        // si une tranchée plus avancée est dispo.
+    // Tirer depuis la tranchée
+    if (this.targetEnemy && !this.targetEnemy.isDead) {
+         const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
+         if(dist < 60) {
+             this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
+             this.rifle.shoot(this.targetEnemy);
+         }
+    } else {
+         const lookDir = (this.team === 0) ? 1 : -1; 
+         this.mesh.lookAt(this.mesh.position.x + lookDir * 100, this.mesh.position.y, 0);
+    }
 
-        // Tirer depuis la tranchée
-        if (this.targetEnemy && !this.targetEnemy.isDead) {
-             const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
-             if(dist < 60) {
-                 this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
-                 this.rifle.shoot(this.targetEnemy);
-             }
-        } else {
-             // Regarder devant (Front)
-             const lookDir = (this.team === 0) ? 1 : -1; 
-             this.mesh.lookAt(this.mesh.position.x + lookDir * 100, this.mesh.position.y, 0);
-        }
+    this.jobCheckTimer = (this.jobCheckTimer || 0) + deltaTime;
+    
+    if (this.jobCheckTimer > 1.0) {
+        this.jobCheckTimer = 0;
+        
+        const manager = this.unitSystem.getManager(this.team);
+        const newTask = manager.assignTask(this.mesh.position);
 
-        // ROTATION DES EFFECTIFS (Le fix pour qu'ils avancent)
-        this.jobCheckTimer = (this.jobCheckTimer || 0) + deltaTime;
-        if (this.jobCheckTimer > 3.0) { // Toutes les 3s
-            this.jobCheckTimer = 0;
-            const manager = this.unitSystem.getManager(this.team);
-            const betterTask = manager.assignTask(this.mesh.position);
+        if (newTask) {
+            // ✅ PRIORITÉ 1 : CONSTRUIRE (même en combat)
+            if (newTask.type === 'BUILD') {
+                this.leaveTrenchAndGo(newTask);
+                return;
+            }
 
-            // Si le manager me propose un truc (puisque assignTask priorise le front maintenant)
-            if (betterTask) {
-                // On compare la position X pour voir si c'est vraiment mieux (plus en avant)
-                const myX = this.mesh.position.x;
-                const newX = betterTask.target.startPos.x;
+            // ✅ PRIORITÉ 2 : DÉFENDRE MIEUX (seulement si pas de combat proche)
+            if (newTask.type === 'DEFEND') {
+                // Si je tire sur un ennemi proche, je ne bouge pas
+                if (this.targetEnemy && !this.targetEnemy.isDead && 
+                    this.mesh.position.distanceTo(this.targetEnemy.mesh.position) < 30) {
+                    return; // ⚠️ Maintenant c'est après avoir vérifié BUILD
+                }
+
+                const currentX = this.assignedTrench ? this.assignedTrench.startPos.x : this.mesh.position.x;
+                const newX = newTask.target.startPos.x;
                 const frontDir = (this.team === 0) ? 1 : -1;
 
-                // Si la nouvelle tâche est significativement plus en avant (> 5m)
-                if ((newX - myX) * frontDir > 5) {
-                    // Je quitte mon trou actuel
-                    if (this.assignedTrench) { // assignedTrench doit être set quand on rentre en DEFEND
-                        // this.assignedTrench.removeOccupant(this); // À coder dans Trench si pas fait
-                        // Mais le isFull() gère, donc on peut juste partir
-                    }
-                    
-                    // J'y vais
-                    this.currentTask = betterTask;
-                    if (betterTask.type === 'BUILD') betterTask.target.addBuilder(this);
-                    else betterTask.target.addOccupant(this);
-                    
-                    this.state = 'MOVING';
+                if ((newX - currentX) * frontDir > 10) {
+                    this.leaveTrenchAndGo(newTask);
+                    return;
                 }
             }
         }
+    }}
+
+
+// Petite fonction utilitaire pour éviter de dupliquer le code
+leaveTrenchAndGo(task) {
+    // Sortir proprement de la tranchée actuelle
+    if (this.assignedTrench) {
+        this.assignedTrench.removeOccupant(this);
+        this.assignedTrench = null;
     }
 
-    // --- LA CHARGE ---
-    startCharge() {
-        // Appelé directement par le Manager
-        this.state = 'CHARGING';
-        this.currentTask = null; // On oublie le chantier
-        this.speed *= 1.5; 
-    }
+    // Accepter la nouvelle mission
+    this.currentTask = task;
+    if (task.type === 'BUILD') task.target.addBuilder(this);
+    else task.target.addOccupant(this); // DEFEND
 
-    behaviorCharge(deltaTime) {
-        // Trouver l'ennemi le plus proche
-        let target = this.unitSystem.getNearestEnemy(this);
-        
-        if (target) {
-            const dist = this.mesh.position.distanceTo(target.mesh.position);
-            
-            // Si loin, on court
-            if (dist > 2.0) {
-                this.moveTo(target.mesh.position, deltaTime);
-            }
-            // Tirer en courant
-            if (dist < 50) this.rifle.shoot(target);
-        } else {
-            // Si plus d'ennemi, on court vers le camp adverse
-            const enemyCampX = (this.team === 0) ? 100 : -100;
-            this.moveTo(new THREE.Vector3(enemyCampX, 0, this.mesh.position.z), deltaTime);
-        }
-    }
+    this.state = 'MOVING';
+}
 
-    // --- OUTILS ---
-    moveTo(targetPos, deltaTime) {
-        const dir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
-        dir.y = 0; 
-        dir.normalize();
-        this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
-        this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
-    }
+// --- LA CHARGE ---
+startCharge() {
+    // Appelé directement par le Manager
+    this.state = 'CHARGING';
+    this.currentTask = null; // On oublie le chantier
+    this.speed *= 1.5; 
+}
 
-    updateHeight(terrainMesh) {
-        const origin = this.mesh.position.clone();
-        origin.y += 20;
-        this.raycaster.set(origin, this.downVector);
-        // Grâce au BVH, ceci est ultra rapide
-        const intersects = this.raycaster.intersectObject(terrainMesh);
-        if (intersects.length > 0) {
-            this.mesh.position.y = intersects[0].point.y;
-        }
-    }
+behaviorCharge(deltaTime) {
+    // Trouver l'ennemi le plus proche
+    let target = this.unitSystem.getNearestEnemy(this);
     
-    takeDamage(amount) {
-        this.hp -= amount;
-        if (this.hp <= 0 && !this.isDead) {
-            this.isDead = true;
-            this.mesh.rotation.x = -Math.PI/2; // Couché
-            this.mesh.position.y -= 0.2;
-            this.mesh.children.forEach(c => c.material.color.setHex(0x555555));
-            
-            // Libérer la place dans la tranchée si on meurt dedans
-            // (À implémenter dans Trench.js : removeOccupant)
-            if (this.assignedTrench) {
-                this.assignedTrench.removeOccupant(this);
-            }
+    if (target) {
+        const dist = this.mesh.position.distanceTo(target.mesh.position);
+        
+        // Si loin, on court
+        if (dist > 2.0) {
+            this.moveTo(target.mesh.position, deltaTime);
+        }
+        // Tirer en courant
+        if (dist < 50) this.rifle.shoot(target);
+    } else {
+        // Si plus d'ennemi, on court vers le camp adverse
+        const enemyCampX = (this.team === 0) ? 100 : -100;
+        this.moveTo(new THREE.Vector3(enemyCampX, 0, this.mesh.position.z), deltaTime);
+    }
+}
+
+// --- OUTILS ---
+moveTo(targetPos, deltaTime) {
+    const dir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
+    dir.y = 0; 
+    dir.normalize();
+    this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
+    this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
+}
+
+updateHeight(terrainMesh) {
+    const origin = this.mesh.position.clone();
+    origin.y += 20;
+    this.raycaster.set(origin, this.downVector);
+    // Grâce au BVH, ceci est ultra rapide
+    const intersects = this.raycaster.intersectObject(terrainMesh);
+    if (intersects.length > 0) {
+        this.mesh.position.y = intersects[0].point.y;
+    }
+}
+    
+takeDamage(amount) {
+    this.hp -= amount;
+    if (this.hp <= 0 && !this.isDead) {
+        this.isDead = true;
+        this.mesh.rotation.x = -Math.PI/2; // Couché
+        this.mesh.position.y -= 0.2;
+        this.mesh.children.forEach(c => c.material.color.setHex(0x555555));
+        
+        // Libérer la place dans la tranchée si on meurt dedans
+        // (À implémenter dans Trench.js : removeOccupant)
+        if (this.assignedTrench) {
+            this.assignedTrench.removeOccupant(this);
         }
     }
+}
 }
 
 export default Unit;
