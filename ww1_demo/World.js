@@ -1,9 +1,16 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
 import Terrain from './Terrain.js';
 import ArtillerySystem from './ArtillerySystem.js';
 import Vegetation from './Vegetation.js';
-// import UnitSystem from './UnitSystem.js'; // Optionnel si tu veux aussi des soldats à pied
+import UnitSystem from './UnitSystem.js';
+
+
+
+const nombre_soldats_par_equipe = 100;
+
+
 
 // 1. Scene & Camera
 const scene = new THREE.Scene();
@@ -20,21 +27,33 @@ camera.add(audiolistener);
 
 // 2. Instanciation des Systèmes
 const terrain = new Terrain(scene);
-const vegetation = new Vegetation(scene, 5000); // 1000 arbres
+const vegetation = new Vegetation(scene, 3000, terrain.size); // 3000 arbres
+
+const unitSystem = new UnitSystem(scene, terrain);
+
+// Spawn Bleus (Equipe 0)
+for(let i=0; i<nombre_soldats_par_equipe; i++) {
+    unitSystem.spawnUnit(terrain.size / -2 + Math.random()*10, (Math.random()-0.5)*20, 0);
+}
+
+// Spawn Rouges (Equipe 1)
+for(let i=0; i<nombre_soldats_par_equipe; i++) {
+    unitSystem.spawnUnit(terrain.size / 2 - Math.random()*10, (Math.random()-0.5)*20, 1);
+}
 
 // L'Artillerie gère les canons ET les obus
 const artillery = new ArtillerySystem(scene, audiolistener, terrain);
 
 // 3. Spawning (Création des unités)
 // Equipe 0 (Bleus) à Gauche (X négatif)
-for(let i = 0; i < 10; i++) {
+for(let i = 0; i < nombre_soldats_par_equipe; i++) {
     // Note: on utilise 'artillery' (le nom de ta constante)
-    artillery.spawnUnit(-60, (Math.random()-0.5)*40, 0); 
+    artillery.spawnUnit(terrain.size / -2 + Math.random()*10, (Math.random()-0.5)*40, 0); 
 }
 
 // Equipe 1 (Rouges) à Droite (X positif)
-for(let i = 0; i < 10; i++) {
-    artillery.spawnUnit(60, (Math.random()-0.5)*40, 1);
+for(let i = 0; i < nombre_soldats_par_equipe; i++) {
+    artillery.spawnUnit(terrain.size / 2 - Math.random()*10, (Math.random()-0.5)*40, 1);
 }
 
 // 4. Rendu & Lumière
@@ -75,6 +94,11 @@ const onKeyDown = (event) => {
     case 'KeyD': moveState.right = true; break;
     case 'Space': moveState.up = true; break;
     case 'ShiftLeft': moveState.down = true; break;
+    case 'KeyC': // 'C' pour Charge !
+        console.log("ORDRE DE CHARGE DONNÉ !");
+        // Les bleus attaquent !
+        unitSystem.triggerCharge(0); 
+        break;
   }
 };
 const onKeyUp = (event) => {
@@ -94,13 +118,36 @@ document.addEventListener('keyup', onKeyUp);
 // 6. Boucle d'Animation
 const clock = new THREE.Clock();
 
+// Compteur FPS
+let frameCount = 0;
+let lastTime = performance.now();
+const fpsDisplay = document.createElement('div');
+fpsDisplay.style.position = 'absolute';
+fpsDisplay.style.top = '10px';
+fpsDisplay.style.left = '10px';
+fpsDisplay.style.color = 'white';
+fpsDisplay.style.fontSize = '20px';
+fpsDisplay.style.fontFamily = 'monospace';
+fpsDisplay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+fpsDisplay.style.padding = '5px 10px';
+fpsDisplay.style.zIndex = '1000';
+document.body.appendChild(fpsDisplay);
+
 function animate() {
-    requestAnimationFrame(animate);
-    
-    const deltaTime = clock.getDelta(); // Plus précis que 0.016 fixe
+    const deltaTime = clock.getDelta();
+
+    // Calcul FPS
+    frameCount++;
+    const currentTime = performance.now();
+    if (currentTime >= lastTime + 1000) {
+        const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+        fpsDisplay.textContent = `FPS: ${fps}`;
+        frameCount = 0;
+        lastTime = currentTime;
+    }
 
     // Mouvements Caméra
-    const moveSpeed = 20 * deltaTime; // Vitesse ajustée au temps
+    const moveSpeed = 20 * deltaTime;
     if (moveState.forward) controls.moveForward(moveSpeed);
     if (moveState.backward) controls.moveForward(-moveSpeed);
     if (moveState.left) controls.moveRight(-moveSpeed);
@@ -113,18 +160,17 @@ function animate() {
     // 1. Mettre à jour l'artillerie (Canons + Obus)
     artillery.update(deltaTime);
     
-    // Si tu as gardé unitSystem pour l'infanterie :
-    // unitSystem.update(deltaTime);
+    unitSystem.update(deltaTime);
 
     // 2. Gérer les conséquences des impacts
     // artillery.impacts est rempli par artillery.update() si des obus touchent le sol
     const explosions = artillery.impacts; 
 
     if (explosions.length > 0) {
-        console.log(`💥 ${explosions.length} explosion(s) détectée(s) cette frame`);
+        //console.log(`💥 ${explosions.length} explosion(s) détectée(s) cette frame`);
         explosions.forEach(pos => {
             // A. Creuser le sol
-            console.log("explosion a :", pos);
+            //console.log("explosion a :", pos);
             terrain.applyCrater(pos, 8); // Rayon 8
 
             // B. Casser les arbres (si vegetation existe)
@@ -134,9 +180,11 @@ function animate() {
 
             // C. Le son est déjà géré dans ArtillerySystem, pas besoin ici !
         });
+        terrain.update();
+        console.log("update", explosions.length)
     }
-    terrain.update();
     renderer.render(scene, camera);
+    requestAnimationFrame(animate);
 }
 
 animate();

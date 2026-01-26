@@ -118,7 +118,7 @@ class ArtillerySystem {
               nearest = otherUnit;
           }
       });
-      console.log("cible trouvee :", nearest.mesh.position);
+      //console.log("cible trouvee :", nearest.mesh.position);
       return nearest; // Retourner l'unité entière pour accéder à sa position via nearest.mesh.position
   }
   createExplosion(position) {

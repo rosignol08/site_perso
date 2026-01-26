@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 
 class Vegetation {
-  constructor(scene, count = 5000) {
+  constructor(scene, count = 5000, terrainSize = 200) {
     this.scene = scene;
     this.count = count;
-    
+    this.terrainSize = terrainSize;
     // 1. Géométries
     // On remonte un peu le pivot pour que l'arbre ne tourne pas autour de sa base mais un peu au dessus
     const trunkGeo = new THREE.CylinderGeometry(0.5, 0.8, 5, 6);
@@ -39,8 +39,8 @@ class Vegetation {
 
     const dummy = new THREE.Object3D();
     for (let i = 0; i < count; i++) {
-        const x = (Math.random() - 0.5) * 200;
-        const z = (Math.random() - 0.5) * 200;
+        const x = (Math.random() - 0.5) * terrainSize;
+        const z = (Math.random() - 0.5) * terrainSize;
         
         dummy.position.set(x, 0, z);
         dummy.rotation.y = Math.random() * Math.PI;

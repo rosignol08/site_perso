@@ -8,7 +8,7 @@ class ArtilleryUnit {
         this.artillerySystem = artillerySystem;
         this.mesh = new THREE.Group();
         this.target = new THREE.Vector3();
-        this.distance_max = 2000; // 200m de portée max
+        this.distance_max = 800; // 800m de portée max
         this.rechargement = 0; //rechargement en secondes
         this.tempsEntreTirs = 3;
         this.peut_tirer = true;
@@ -85,11 +85,11 @@ class ArtilleryUnit {
     fire(startPos, targetPos) {
         
         const dispersion = Math.sqrt(((targetPos.x - startPos.x)**2) + ((targetPos.y - startPos.y)**2) +((targetPos.z - startPos.z)**2) ); //plus la cible est loin, plus la dispersion est grande
-        console.log("startPos", startPos , " target ",targetPos, "dispertion", dispersion);
+        //console.log("startPos", startPos , " target ",targetPos, "dispertion", dispersion);
         const noisyTarget = targetPos.clone();
         noisyTarget.x += (Math.random() - 0.5) * dispersion;
         noisyTarget.z += (Math.random() - 0.5) * dispersion;
-        console.log("Tir vers ", noisyTarget.x, noisyTarget.z, "aulieu de ", targetPos.x, targetPos.z, "avec dispersion de ", dispersion);
+        //console.log("Tir vers ", noisyTarget.x, noisyTarget.z, "aulieu de ", targetPos.x, targetPos.z, "avec dispersion de ", dispersion);
         const geometry = new THREE.SphereGeometry(1, 2, 6);
         const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
         const obus = new THREE.Mesh(geometry, material);
@@ -125,7 +125,7 @@ class ArtilleryUnit {
         if (this.Mort){this.updateHeightOnTerrain(terrainMesh); return;}
         //console.log("debug");
         const oldPos = this.mesh.position.clone();
-        this.updateHeightOnTerrain(terrainMesh);
+        //this.updateHeightOnTerrain(terrainMesh); //psk si le terrain a changé c'est psk il y a eu un cratère et si y a eu un cratère elle est morte
         
         // 2. Gestion du Déplacement (Si on a une destination)
         if (this.destination) {
@@ -142,25 +142,42 @@ class ArtilleryUnit {
                 this.destination = null; // Arrivé !
             }
         }
-        //const hasMoved = Math.abs(this.mesh.position.x - oldPos.x) > 0.01 || Math.abs(this.mesh.position.z - oldPos.z) > 0.01;
-        //if (hasMoved) {
-        //    this.updateHeightOnTerrain(terrainMesh);
-        //}
+        const hasMoved = Math.abs(this.mesh.position.x - oldPos.x) > 0.01 || Math.abs(this.mesh.position.z - oldPos.z) > 0.01;
+        if (hasMoved) {
+            this.updateHeightOnTerrain(terrainMesh);
+        }
         // 3. Gestion du Combat (Si on n'a pas de destination, on cherche à tirer)
         if (!this.destination) {
             this.rechargement -= deltaTime;
 
-            // Si on a une cible et qu'on peut tirer
-            if (this.targetUnit && this.targetUnit.mesh && !this.targetUnit.Mort && this.rechargement <= 0) {
-                // Vérifier la distance
+            // Si on a une cible et qu'elle existe encore
+            if (this.targetUnit && this.targetUnit.mesh && !this.targetUnit.Mort) {
                 const distance = this.mesh.position.distanceTo(this.targetUnit.mesh.position);
                 
-                if (distance <= this.distance_max) {
-                    // On se tourne vers l'ennemi
+                // ✅ SI TROP LOIN : On s'approche
+                if (distance > this.distance_max) {
+                    const porteeEffective = this.distance_max * 0.8; // Se rapprocher à 80% de la portée max
+                    const direction = new THREE.Vector3()
+                        .subVectors(this.targetUnit.mesh.position, this.mesh.position)
+                        .normalize();
+                    
+                    // Calculer position à portée de tir
+                    const targetPos = this.targetUnit.mesh.position.clone()
+                        .sub(direction.multiplyScalar(porteeEffective));
+                    
+                    this.moveTo(targetPos);
+                }
+                // ✅ SI À PORTÉE : On tire
+                else if (this.rechargement <= 0) {
                     this.mesh.lookAt(this.targetUnit.mesh.position.x, this.mesh.position.y, this.targetUnit.mesh.position.z);
                     
-                    // FEU !
-                    this.fire(this.mesh.position, this.targetUnit.mesh.position);
+                    const delaiVisee = 0.5 + Math.random() * 1;
+                    setTimeout(() => {
+                        if (!this.Mort && this.targetUnit && !this.targetUnit.Mort) {
+                            this.fire(this.mesh.position, this.targetUnit.mesh.position);
+                        }
+                    }, delaiVisee * 1000);
+                    
                     this.rechargement = this.tempsEntreTirs;
                 }
             }
@@ -169,18 +186,11 @@ class ArtilleryUnit {
     }
 
     updateHeightOnTerrain(terrainMesh) {
-        // On lance le rayon depuis "haut" (position actuelle + 20 mètres) vers le bas
         const rayOrigin = this.mesh.position.clone();
         rayOrigin.y += 20; 
-
         this.raycaster.set(rayOrigin, this.downVector);
-
-        // On teste l'intersection avec le mesh du terrain
         const intersects = this.raycaster.intersectObject(terrainMesh);
-
         if (intersects.length > 0) {
-            // Le point d'impact est la surface du sol
-            // On place le soldat exactement là
             this.mesh.position.y = intersects[0].point.y;
         }
     }
@@ -200,7 +210,7 @@ class ArtilleryUnit {
     die() {
         if(this.Mort) return;
         this.Mort = true;
-        console.log("Unité détruite !");
+        //console.log("Unité détruite !");
         
         // L'unité devient noire et fume (ou disparait)
         this.mesh.children.forEach(c => c.material.color.setHex(0x222222));

@@ -1,101 +1,240 @@
-//pour le soldat individuel
 import * as THREE from 'three';
+import Rifle from './Rifle.js';
 
 class Unit {
-    constructor(scene, startPosition) {
+    constructor(scene, startPosition, team, unitSystem) {
         this.scene = scene;
+        this.unitSystem = unitSystem;
+        this.team = team; 
         
-        // 1. Création visuelle (Groupe : Corps + Tête)
+        // Enregistrement auprès du manager pour la charge globale
+        const manager = this.unitSystem.getManager(this.team);
+        manager.registerSoldier(this);
+
+        this.hp = 100;
+        this.isDead = false;
+        this.rifle = new Rifle(scene, this);
+
+        // --- VISUEL ---
         this.mesh = new THREE.Group();
-        
-        // Corps (Cylindre gris/kaki)
-        const bodyGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.8, 8);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x556B2F }); // Olive Drab
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.position.y = 0.9; // Pour que le pivot soit aux pieds
+        const color = team === 0 ? 0x0000FF : 0xFF0000;
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.7, 8), new THREE.MeshStandardMaterial({ color: color }));
+        body.position.y = 0.85;
         body.castShadow = true;
         this.mesh.add(body);
-
-        // Tête (Sphère simple)
-        const headGeo = new THREE.SphereGeometry(0.4, 8, 8);
-        const headMat = new THREE.MeshStandardMaterial({ color: 0x333333 }); // Casque foncé
-        const head = new THREE.Mesh(headGeo, headMat);
-        head.position.y = 2;
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+        head.position.y = 1.9;
         this.mesh.add(head);
-
-        // Position initiale
         this.mesh.position.copy(startPosition);
         scene.add(this.mesh);
 
-        // 2. Propriétés de déplacement
-        this.speed = 2 + Math.random(); // Vitesse un peu aléatoire
-        this.target = null;
+        // --- LOGIQUE ---
+        this.speed = 7.0 + Math.random(); 
+        this.state = 'IDLE'; 
         
-        // Outil pour détecter le sol
+        this.currentTask = null; // { type: 'BUILD'|'DEFEND', target: Trench }
+        
         this.raycaster = new THREE.Raycaster();
+        this.raycaster.firstHitOnly = true; 
         this.downVector = new THREE.Vector3(0, -1, 0);
     }
 
-    setTarget(targetVector) {
-        this.target = targetVector.clone();
-    }
-
     update(deltaTime, terrainMesh) {
-        if (!this.target) return;
+        if (this.isDead) return;
 
-        // --- A. Déplacement Horizontal (X, Z) ---
-        
-        // 1. Calculer la direction vers la cible
-        const direction = new THREE.Vector3()
-            .subVectors(this.target, this.mesh.position);
-        
-        // On ignore la hauteur pour le calcul de direction (on veut juste avancer en X/Z)
-        direction.y = 0; 
-        
-        // Si on est proche de la cible (ex: < 1m), on s'arrête
-        if (direction.length() < 1) {
-            this.target = null;
-            return; // Arrivé
+        this.updateHeight(terrainMesh);
+        this.rifle.update(deltaTime);
+
+        // Priorité absolue : Si je suis en CHARGING, je fonce
+        if (this.state === 'CHARGING') {
+            this.behaviorCharge(deltaTime);
+            return;
         }
 
-        direction.normalize();
-
-        // 2. Avancer
-        this.mesh.position.addScaledVector(direction, this.speed * deltaTime);
-
-        // 3. Regarder la cible
-        this.mesh.lookAt(this.target.x, this.mesh.position.y, this.target.z);
-
-
-        // --- B. Gestion de la Hauteur (Y) ---
-        
-        this.updateHeightOnTerrain(terrainMesh);
-        // Dans Unit.js
-        this.walkTime = 0; // Dans constructor
-            
-        // Dans update()
-        this.walkTime += deltaTime * this.speed * 10;
-        // Petit sautillement sur Y + rotation légère sur Z
-        this.mesh.children[0].position.y = 0.9 + Math.sin(this.walkTime) * 0.1; 
-        this.mesh.rotation.z = Math.sin(this.walkTime) * 0.05;
+        switch (this.state) {
+            case 'IDLE':
+                this.behaviorIdle();
+                break;
+            case 'MOVING':
+                this.behaviorMove(deltaTime);
+                break;
+            case 'BUILDING':
+                this.behaviorBuild(deltaTime);
+                break;
+            case 'DEFENDING':
+                this.behaviorDefend(deltaTime);
+                break;
+        }
     }
 
-    updateHeightOnTerrain(terrainMesh) {
-        // On lance le rayon depuis "haut" (position actuelle + 20 mètres) vers le bas
-        const rayOrigin = this.mesh.position.clone();
-        rayOrigin.y += 20; 
+    behaviorIdle() {
+        // Demander un travail au manager
+        const manager = this.unitSystem.getManager(this.team);
+        const task = manager.assignTask(this.mesh.position);
 
-        this.raycaster.set(rayOrigin, this.downVector);
-
-        // On teste l'intersection avec le mesh du terrain
-        const intersects = this.raycaster.intersectObject(terrainMesh);
-
-        if (intersects.length > 0) {
-            // Le point d'impact est la surface du sol
-            // On place le soldat exactement là
-            this.mesh.position.y = intersects[0].point.y;
+        if (task) {
+            this.currentTask = task;
             
-            // TODO plus tard: Orienter le soldat selon la pente (intersects[0].face.normal)
+            if (task.type === 'BUILD') {
+                // Tenter de s'inscrire comme constructeur
+                if (task.target.addBuilder(this)) {
+                    this.state = 'MOVING';
+                }
+            } 
+            else if (task.type === 'DEFEND') {
+                // Tenter de s'inscrire comme occupant
+                if (task.target.addOccupant(this)) {
+                    this.state = 'MOVING';
+                }
+            }
+        } else {
+            // Rien à faire ? On regarde bêtement l'ennemi
+            // Ou on patrouille
+        }
+    }
+
+    behaviorMove(deltaTime) {
+        if (!this.currentTask) { this.state = 'IDLE'; return; }
+
+        // On va vers le milieu de la structure
+        // Astuce : cible un point aléatoire autour du centre pour éviter que les soldats se superposent
+        const targetPos = this.currentTask.target.startPos.clone(); 
+        
+        const dist = this.mesh.position.distanceTo(targetPos);
+
+        if (dist < 2.0) {
+            // Arrivé !
+            if (this.currentTask.type === 'BUILD') {
+                this.state = 'BUILDING';
+            } else {
+                this.state = 'DEFENDING';
+            }
+        } else {
+            this.moveTo(targetPos, deltaTime);
+        }
+    }
+
+    behaviorBuild(deltaTime) {
+        const structure = this.currentTask?.target;
+        
+        // Si pas de structure ou si elle est finie
+        if (!structure || structure.isFinished) {
+            // 1. On démissionne du poste de constructeur actuel
+            if (structure) structure.removeBuilder(this);
+            
+            // 2. IMPORTANT : On oublie la tâche et on repasse en IDLE
+            // Cela va forcer le 'update' suivant à relancer behaviorIdle()
+            // qui va appeler manager.assignTask() et trouver le prochain chantier !
+            this.currentTask = null;
+            this.state = 'IDLE';
+            return;
+        }
+
+        // Animation
+        this.mesh.rotation.y += deltaTime * 5;
+        
+        // Optimisation pelle
+        this.digTimer = (this.digTimer || 0) + deltaTime;
+        if (this.digTimer > 0.1) {
+            const speed = structure.type === 'BUNKER' ? 0.01 : 0.05; 
+            structure.dig(speed);
+            this.digTimer = 0;
+        }
+    }
+
+    behaviorDefend(deltaTime) {
+        // Regarder vers l'ennemi
+        const lookDir = (this.team === 0) ? 1 : -1; 
+        this.mesh.lookAt(this.mesh.position.x + lookDir * 100, this.mesh.position.y, 0);
+
+        // --- NOUVEAU : Check périodique pour du travail ---
+        this.jobCheckTimer = (this.jobCheckTimer || 0) + deltaTime;
+        
+        // Toutes les 2 secondes, on vérifie si on est plus utile ailleurs
+        if (this.jobCheckTimer > 2.0) {
+            this.jobCheckTimer = 0;
+            const manager = this.unitSystem.getManager(this.team);
+            
+            // On demande "Y a-t-il mieux à faire ?"
+            const newTask = manager.assignTask(this.mesh.position);
+            
+            // Si le manager propose de CONSTRUIRE alors qu'on DÉFEND
+            if (newTask && newTask.type === 'BUILD') {
+                // On quitte notre poste de défense
+                if (this.assignedTrench) { // (assure-toi que assignedTrench est bien set quand il rentre dedans)
+                     // Note: il faudrait une méthode removeOccupant dans Trench.js, sinon c'est pas grave le isFull gère
+                }
+                
+                // On accepte la nouvelle mission
+                this.currentTask = newTask;
+                newTask.target.addBuilder(this); // On s'inscrit
+                this.state = 'MOVING';
+                return;
+            }
+        }
+    }
+
+    // --- LA CHARGE ---
+    startCharge() {
+        // Appelé directement par le Manager
+        this.state = 'CHARGING';
+        this.currentTask = null; // On oublie le chantier
+        this.speed *= 1.5; 
+    }
+
+    behaviorCharge(deltaTime) {
+        // Trouver l'ennemi le plus proche
+        let target = this.unitSystem.getNearestEnemy(this);
+        
+        if (target) {
+            const dist = this.mesh.position.distanceTo(target.mesh.position);
+            
+            // Si loin, on court
+            if (dist > 2.0) {
+                this.moveTo(target.mesh.position, deltaTime);
+            }
+            // Tirer en courant
+            if (dist < 50) this.rifle.shoot(target);
+        } else {
+            // Si plus d'ennemi, on court vers le camp adverse
+            const enemyCampX = (this.team === 0) ? 100 : -100;
+            this.moveTo(new THREE.Vector3(enemyCampX, 0, this.mesh.position.z), deltaTime);
+        }
+    }
+
+    // --- OUTILS ---
+    moveTo(targetPos, deltaTime) {
+        const dir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
+        dir.y = 0; 
+        dir.normalize();
+        this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
+        this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
+    }
+
+    updateHeight(terrainMesh) {
+        const origin = this.mesh.position.clone();
+        origin.y += 20;
+        this.raycaster.set(origin, this.downVector);
+        // Grâce au BVH, ceci est ultra rapide
+        const intersects = this.raycaster.intersectObject(terrainMesh);
+        if (intersects.length > 0) {
+            this.mesh.position.y = intersects[0].point.y;
+        }
+    }
+    
+    takeDamage(amount) {
+        this.hp -= amount;
+        if (this.hp <= 0 && !this.isDead) {
+            this.isDead = true;
+            this.mesh.rotation.x = -Math.PI/2; // Couché
+            this.mesh.position.y -= 0.2;
+            this.mesh.children.forEach(c => c.material.color.setHex(0x555555));
+            
+            // Libérer la place dans la tranchée si on meurt dedans
+            // (À implémenter dans Trench.js : removeOccupant)
+            if (this.assignedTrench) {
+                this.assignedTrench.removeOccupant(this);
+            }
         }
     }
 }

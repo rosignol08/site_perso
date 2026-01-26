@@ -15,6 +15,16 @@
 </head>
 <body>
   <!-- CDN Three.js (module) -->
+   <script type="module">
+    import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'https://unpkg.com/three-mesh-bvh@0.7.3/build/index.module.js';
+    import * as THREE from 'three';
+
+    // On "pimp" Three.js pour qu'il utilise la librairie
+    THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+    THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+    THREE.Mesh.prototype.raycast = acceleratedRaycast;
+</script>
+
   <script type="importmap">
     {
       "imports": {
@@ -23,6 +33,13 @@
       }
     }
   </script>
+  <!-- <script type="module"> -->
+  <!-- import Stats from "https://unpkg.com/three@0.160.0/examples/jsm/libs/stats.module.js"; -->
+<!--  -->
+  <!-- const stats = new Stats(); -->
+  <!-- document.body.appendChild(stats.dom); -->
+  <!-- </script> -->
+
   
   <!-- Charger uniquement World.js qui gère tout -->
   <script type="module" src="./World.js"></script>
