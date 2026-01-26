@@ -37,6 +37,8 @@ class Unit {
         this.raycaster = new THREE.Raycaster();
         this.raycaster.firstHitOnly = true; 
         this.downVector = new THREE.Vector3(0, -1, 0);
+
+        this.combatRange = 40;
     }
 
     update(deltaTime, terrainMesh) {
@@ -49,6 +51,11 @@ class Unit {
         if (this.state === 'CHARGING') {
             this.behaviorCharge(deltaTime);
             return;
+        }
+        // --- 1. INSTINCT DE SURVIE (PRIORITÉ ABSOLUE) ---
+        // Sauf si on charge déjà (car on tire en courant)
+        if (this.state !== 'CHARGING' && this.state !== 'COMBAT') {
+            this.scanForThreats();
         }
 
         switch (this.state) {
@@ -66,6 +73,74 @@ class Unit {
                 break;
         }
     }
+
+    // Vérifie s'il y a des ennemis proches
+    scanForThreats() {
+        // On ne scanne pas à chaque frame pour les perfs (1 fois tous les 0.2s)
+        if (Math.random() > 0.2) return;
+
+        // Si on a déjà une cible vivante et proche, on reste concentré dessus
+        if (this.targetEnemy && !this.targetEnemy.isDead) {
+            const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
+            if (dist < this.combatRange) {
+                // Si on était en train de construire ou marcher, on arrête tout pour se battre
+                if (this.state === 'BUILDING' || this.state === 'MOVING' || this.state === 'IDLE') {
+                    this.enterCombatMode();
+                }
+                return;
+            }
+        }
+
+        // Sinon on cherche le plus proche
+        const nearest = this.unitSystem.getNearestEnemy(this);
+        if (nearest) {
+            const dist = this.mesh.position.distanceTo(nearest.mesh.position);
+            if (dist < this.combatRange) {
+                this.targetEnemy = nearest;
+                // Si on est à découvert (pas DEFENDING), on passe en COMBAT
+                if (this.state !== 'DEFENDING') {
+                    this.enterCombatMode();
+                }
+            }
+        }
+    }
+
+    enterCombatMode() {
+        console.log("Ennemi en vue ! J'arrête de travailler !");
+        
+        // On lâche le chantier actuel
+        if (this.currentTask && this.currentTask.type === 'BUILD') {
+            this.currentTask.target.removeBuilder(this);
+        }
+        // On lâche le poste de défense si on veut bouger (optionnel)
+        // Ici on dit : COMBAT = Escarmouche à découvert
+        
+        this.state = 'COMBAT';
+    }
+
+    behaviorCombat(deltaTime) {
+        // Si la cible est morte ou trop loin, on retourne au boulot
+        if (!this.targetEnemy || this.targetEnemy.isDead || this.mesh.position.distanceTo(this.targetEnemy.mesh.position) > this.combatRange * 1.5) {
+            this.targetEnemy = null;
+            this.state = 'IDLE'; // On redemandera une tâche au manager
+            return;
+        }
+
+        // 1. Regarder l'ennemi
+        this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
+
+        // 2. Tirer
+        this.rifle.shoot(this.targetEnemy);
+        //si on est trop proche on recule un peu
+        const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
+        if (dist < this.combatRange * 0.5) {
+            const dir = new THREE.Vector3().subVectors(this.mesh.position, this.targetEnemy.mesh.position);
+            dir.y = 0;
+            dir.normalize();
+            this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
+        }
+    }
+    
 
     behaviorIdle() {
         // Demander un travail au manager
@@ -142,50 +217,52 @@ class Unit {
         }
     }
 
-    behaviorDefend(deltaTime) {
-    // 1. Regarder vers l'ennemi par défaut (Ligne de front)
-    const lookDir = (this.team === 0) ? 1 : -1; 
-    const defaultLookTarget = new THREE.Vector3(this.mesh.position.x + lookDir * 100, this.mesh.position.y, 0);
-    
-    // 2. Chercher un vrai ennemi pour tirer
-    if (!this.targetEnemy || this.targetEnemy.isDead || this.targetEnemy.mesh.position.distanceTo(this.mesh.position) > 60) {
-        this.targetEnemy = this.unitSystem.getNearestEnemy(this);
-    }
+behaviorDefend(deltaTime) {
+        // C'est ta fonction existante, MAIS on s'assure qu'ils changent de place
+        // si une tranchée plus avancée est dispo.
 
-    if (this.targetEnemy) {
-        // Viser l'ennemi
-        this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
-        // Tirer !
-        const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
-        if (dist < 60) { // Portée du fusil
-             this.rifle.shoot(this.targetEnemy);
+        // Tirer depuis la tranchée
+        if (this.targetEnemy && !this.targetEnemy.isDead) {
+             const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
+             if(dist < 60) {
+                 this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
+                 this.rifle.shoot(this.targetEnemy);
+             }
+        } else {
+             // Regarder devant (Front)
+             const lookDir = (this.team === 0) ? 1 : -1; 
+             this.mesh.lookAt(this.mesh.position.x + lookDir * 100, this.mesh.position.y, 0);
         }
-    } else {
-        // Pas d'ennemi, on regarde le lointain
-        this.mesh.lookAt(defaultLookTarget.x, defaultLookTarget.y, defaultLookTarget.z);
-    }
 
-    // --- Check périodique pour du travail (Ton code existant) ---
-    this.jobCheckTimer = (this.jobCheckTimer || 0) + deltaTime;
-    if (this.jobCheckTimer > 2.0) {
+        // ROTATION DES EFFECTIFS (Le fix pour qu'ils avancent)
+        this.jobCheckTimer = (this.jobCheckTimer || 0) + deltaTime;
+        if (this.jobCheckTimer > 3.0) { // Toutes les 3s
             this.jobCheckTimer = 0;
             const manager = this.unitSystem.getManager(this.team);
-            
-            // On demande "Y a-t-il mieux à faire ?"
-            const newTask = manager.assignTask(this.mesh.position);
-            
-            // Si le manager propose de CONSTRUIRE alors qu'on DÉFEND
-            if (newTask && newTask.type === 'BUILD') {
-                // On quitte notre poste de défense
-                if (this.assignedTrench) { // (assure-toi que assignedTrench est bien set quand il rentre dedans)
-                     // Note: il faudrait une méthode removeOccupant dans Trench.js, sinon c'est pas grave le isFull gère
+            const betterTask = manager.assignTask(this.mesh.position);
+
+            // Si le manager me propose un truc (puisque assignTask priorise le front maintenant)
+            if (betterTask) {
+                // On compare la position X pour voir si c'est vraiment mieux (plus en avant)
+                const myX = this.mesh.position.x;
+                const newX = betterTask.target.startPos.x;
+                const frontDir = (this.team === 0) ? 1 : -1;
+
+                // Si la nouvelle tâche est significativement plus en avant (> 5m)
+                if ((newX - myX) * frontDir > 5) {
+                    // Je quitte mon trou actuel
+                    if (this.assignedTrench) { // assignedTrench doit être set quand on rentre en DEFEND
+                        // this.assignedTrench.removeOccupant(this); // À coder dans Trench si pas fait
+                        // Mais le isFull() gère, donc on peut juste partir
+                    }
+                    
+                    // J'y vais
+                    this.currentTask = betterTask;
+                    if (betterTask.type === 'BUILD') betterTask.target.addBuilder(this);
+                    else betterTask.target.addOccupant(this);
+                    
+                    this.state = 'MOVING';
                 }
-                
-                // On accepte la nouvelle mission
-                this.currentTask = newTask;
-                newTask.target.addBuilder(this); // On s'inscrit
-                this.state = 'MOVING';
-                return;
             }
         }
     }
