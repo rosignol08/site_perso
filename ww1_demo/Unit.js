@@ -143,15 +143,31 @@ class Unit {
     }
 
     behaviorDefend(deltaTime) {
-        // Regarder vers l'ennemi
-        const lookDir = (this.team === 0) ? 1 : -1; 
-        this.mesh.lookAt(this.mesh.position.x + lookDir * 100, this.mesh.position.y, 0);
+    // 1. Regarder vers l'ennemi par défaut (Ligne de front)
+    const lookDir = (this.team === 0) ? 1 : -1; 
+    const defaultLookTarget = new THREE.Vector3(this.mesh.position.x + lookDir * 100, this.mesh.position.y, 0);
+    
+    // 2. Chercher un vrai ennemi pour tirer
+    if (!this.targetEnemy || this.targetEnemy.isDead || this.targetEnemy.mesh.position.distanceTo(this.mesh.position) > 60) {
+        this.targetEnemy = this.unitSystem.getNearestEnemy(this);
+    }
 
-        // --- NOUVEAU : Check périodique pour du travail ---
-        this.jobCheckTimer = (this.jobCheckTimer || 0) + deltaTime;
-        
-        // Toutes les 2 secondes, on vérifie si on est plus utile ailleurs
-        if (this.jobCheckTimer > 2.0) {
+    if (this.targetEnemy) {
+        // Viser l'ennemi
+        this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
+        // Tirer !
+        const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
+        if (dist < 60) { // Portée du fusil
+             this.rifle.shoot(this.targetEnemy);
+        }
+    } else {
+        // Pas d'ennemi, on regarde le lointain
+        this.mesh.lookAt(defaultLookTarget.x, defaultLookTarget.y, defaultLookTarget.z);
+    }
+
+    // --- Check périodique pour du travail (Ton code existant) ---
+    this.jobCheckTimer = (this.jobCheckTimer || 0) + deltaTime;
+    if (this.jobCheckTimer > 2.0) {
             this.jobCheckTimer = 0;
             const manager = this.unitSystem.getManager(this.team);
             

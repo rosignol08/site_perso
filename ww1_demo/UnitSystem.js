@@ -6,12 +6,15 @@ class UnitSystem {
     constructor(scene, terrain) {
         this.scene = scene;
         this.terrain = terrain;
-        this.units = []; // Toutes les unités
-        this.trenches = []; // Liste des tranchées existantes
-        // Manager Bleu (Team 0) : Ligne de front à X = -50
-        this.managerBlue = new ConstructionManager(scene, terrain, 0, -40);
-        // Manager Rouge (Team 1) : Ligne de front à X = +50
-        this.managerRed = new ConstructionManager(scene, terrain, 1, 40);
+        this.units = [];
+        this.trenches = []; 
+
+        // CONFIGURATION DES BASES
+        // Bleu : Commence à X=-80 et avance vers la droite (+1)
+        this.managerBlue = new ConstructionManager(scene, terrain, 0, -80, 1);
+        
+        // Rouge : Commence à X=+80 et avance vers la gauche (-1)
+        this.managerRed = new ConstructionManager(scene, terrain, 1, 80, -1);
     }
 
     spawnUnit(x, z, team) {
@@ -20,10 +23,14 @@ class UnitSystem {
         this.units.push(unit);
     }
 
+    getManager(team) {
+        return (team === 0) ? this.managerBlue : this.managerRed;
+    }
+
     triggerCharge(team) {
-        // Appel direct sur le manager qui a la liste de ses soldats
         this.getManager(team).orderGlobalCharge();
     }
+
     getManager(team) {
         return (team === 0) ? this.managerBlue : this.managerRed;
     }
@@ -61,7 +68,12 @@ class UnitSystem {
     }
 
     update(deltaTime) {
+        // 1. Update des unités
         this.units.forEach(u => u.update(deltaTime, this.terrain.mesh));
+
+        // 2. IMPORTANT : Update des Managers pour qu'ils planifient les nouvelles lignes
+        this.managerBlue.update();
+        this.managerRed.update();
     }
 }
 

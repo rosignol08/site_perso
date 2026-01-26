@@ -155,6 +155,14 @@ class Terrain {
       
       this.hasChanged = false; 
   }
+  refresh_tout() {
+      // 1. Mise à jour physique (OBLIGATOIRE et RAPIDE)
+      this.geometry.attributes.position.needsUpdate = true;
+      // 2. Mise à jour du Raycasting (BVH) (OBLIGATOIRE et RAPIDE)
+      this.geometry.boundsTree.refit();
+      // 3. Mise à jour lumière (LOURD !!)
+      this.geometry.computeVertexNormals();
+  }
 }
 
 export default Terrain;

@@ -8,7 +8,7 @@ import UnitSystem from './UnitSystem.js';
 
 
 
-const nombre_soldats_par_equipe = 100;
+const nombre_soldats_par_equipe = 50;
 
 
 
@@ -33,12 +33,16 @@ const unitSystem = new UnitSystem(scene, terrain);
 
 // Spawn Bleus (Equipe 0)
 for(let i=0; i<nombre_soldats_par_equipe; i++) {
-    unitSystem.spawnUnit(terrain.size / -2 + Math.random()*10, (Math.random()-0.5)*20, 0);
+    //unitSystem.spawnUnit(terrain.size / -2 + Math.random()*10, (Math.random()-0.5)*20, 0);
+    unitSystem.spawnUnit(-90, (Math.random()-0.5)*50, 0);
+
 }
 
 // Spawn Rouges (Equipe 1)
 for(let i=0; i<nombre_soldats_par_equipe; i++) {
-    unitSystem.spawnUnit(terrain.size / 2 - Math.random()*10, (Math.random()-0.5)*20, 1);
+    //unitSystem.spawnUnit(terrain.size / 2 - Math.random()*10, (Math.random()-0.5)*20, 1);
+    unitSystem.spawnUnit(90, (Math.random()-0.5)*50, 1);
+
 }
 
 // L'Artillerie gère les canons ET les obus
@@ -46,16 +50,18 @@ const artillery = new ArtillerySystem(scene, audiolistener, terrain);
 
 // 3. Spawning (Création des unités)
 // Equipe 0 (Bleus) à Gauche (X négatif)
-for(let i = 0; i < nombre_soldats_par_equipe; i++) {
-    // Note: on utilise 'artillery' (le nom de ta constante)
-    artillery.spawnUnit(terrain.size / -2 + Math.random()*10, (Math.random()-0.5)*40, 0); 
-}
+//for(let i = 0; i < nombre_soldats_par_equipe; i++) {
+//    // Note: on utilise 'artillery' (le nom de ta constante)
+//    artillery.spawnUnit(terrain.size / -2 + Math.random()*10, (Math.random()-0.5)*40, 0); 
+//}
+//
+//// Equipe 1 (Rouges) à Droite (X positif)
+//for(let i = 0; i < nombre_soldats_par_equipe; i++) {
+//    artillery.spawnUnit(terrain.size / 2 - Math.random()*10, (Math.random()-0.5)*40, 1);
+//}
+// Bleus (fond de map gauche)
 
-// Equipe 1 (Rouges) à Droite (X positif)
-for(let i = 0; i < nombre_soldats_par_equipe; i++) {
-    artillery.spawnUnit(terrain.size / 2 - Math.random()*10, (Math.random()-0.5)*40, 1);
-}
-
+// Rouges (fond de map droit)
 // 4. Rendu & Lumière
 const renderer = new THREE.WebGLRenderer({ antialias: true }); // Antialias pour que ce soit plus joli
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -132,10 +138,23 @@ fpsDisplay.style.backgroundColor = 'rgba(0,0,0,0.5)';
 fpsDisplay.style.padding = '5px 10px';
 fpsDisplay.style.zIndex = '1000';
 document.body.appendChild(fpsDisplay);
+let time = 0;
 
 function animate() {
     const deltaTime = clock.getDelta();
-
+    time += deltaTime;
+    // Toutes les 2 secondes, un renfort arrive
+    //if (time > 2.0) {
+    //    time = 0;
+    //    // Spawn Bleu
+    //    unitSystem.spawnUnit(-70, (Math.random()-0.5)*100, 0);
+    //    // Spawn Rouge
+    //    unitSystem.spawnUnit(70, (Math.random()-0.5)*100, 1);
+    //}
+    if (time > 2.5) {
+        time = 0;
+        terrain.refresh_tout();
+    }
     // Calcul FPS
     frameCount++;
     const currentTime = performance.now();
