@@ -11,11 +11,20 @@
 <body>
     <canvas id="canvas"></canvas>
     <div id="space-ui">
-    <a href="#" class="space-button" data-speed="1">PROJETS</a>
-    <a href="#" class="space-button" data-speed="0.8">CONTACT</a>
-    <a href="presentation_page.html" class="space-button" data-speed="1.2">A PROPOS</a>
+    <a href="#" class="space-button">
+        <strong>simulation</strong>
+        <span class="btn-desc">Un projet de simulation de foret sur raylib (c++) </span>
+    </a>
+    <a href="#" class="space-button">
+        <strong>3D</strong>
+        <span class="btn-desc">Les trucs que je fait en 3D (C/C++)</span>
+    </a>
+    <a href="" class="space-button">
+        <strong>À PROPOS</strong>
+        <span class="btn-desc">Qui suis-je ?</span>
+    </a>
     </div>
-     <script type="importmap">
+     <!-- <script type="importmap">
          {
              "imports": {
                  "three": "./js/three.module.min.js",
@@ -26,8 +35,13 @@
      }
     
     </script>
-    <script type="module" src="./js/script_index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+-->
+    <div id="static-ui">
+        <a href="presentation_page.html" class="fixed-btn">moi</a>
+        <a href="page_connexion.html" class="fixed-btn">contacs</a>
+    </div>
+    <script type="module" src="./js/script_index.js"></script>
     <!--     <script src="three.module.min.js"></script>
          "gsap": "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"
     -->

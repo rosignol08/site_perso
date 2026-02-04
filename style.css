@@ -81,86 +81,85 @@ body{
   animation: zoom 16s alternate infinite; 
 }
 
+#static-ui {
+    position: fixed; /* Reste fixe même si on scrollait */
+    top: 20px;
+    right: 20px;     /* Calé en haut à droite */
+    z-index: 20;     /* 20 > 10, donc ça passe AU-DESSUS des boutons flottants */
+    display: flex;   /* Pour les aligner côte à côte */
+    gap: 15px;       /* Espace entre les boutons fixes */
+}
 
-#text-container {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 24px;
-    color: white;
-    background: rgba(0, 0, 0, 0.5);
+.fixed-btn {
+    /* On reprend le même style visuel que les boutons spatiaux */
     padding: 10px 20px;
-    border-radius: 10px;
-    text-align: center;
+    background: rgba(255, 255, 255, 0.2); /* Un peu plus brillant pour se distinguer */
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    text-decoration: none;
+    font-family: sans-serif;
+    border-radius: 8px; /* Forme un peu différente (carré arrondi) pour différencier */
+    backdrop-filter: blur(5px);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.fixed-btn:hover {
+    background: white;
+    color: black;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+}
+
+/* Style du texte de description */
+.btn-desc {
+    display: block;
+    position: absolute;
+    top: 100%; /* Juste en dessous du bouton */
+    left: 50%;
+    transform: translateX(-50%); /* Centré */
+    width: 150px; /* Largeur de la bulle */
+    
+    background: rgba(0, 0, 0, 0.8);
+    color: #ddd;
+    font-size: 12px;
+    padding: 8px;
+    border-radius: 6px;
+    margin-top: 10px;
+    opacity: 0; /* Caché par défaut */
+    visibility: hidden;
+    transition: all 0.3s ease;
+    pointer-events: none; /* Le texte ne doit pas gêner le clic */
+    z-index: 100;
+}
+
+/* Petite flèche au-dessus de la bulle (optionnel mais joli) */
+.btn-desc::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent rgba(0, 0, 0, 0.8) transparent;
+}
+
+/* Affiche la description UNIQUEMENT quand la classe .frozen est ajoutée par le JS */
+.space-button.frozen .btn-desc {
     opacity: 1;
-    transition: opacity 0.5s ease-in-out;
+    visibility: visible;
+    margin-top: 5px;
 }
 
-.fade-out {
-    opacity: 0;
+/* Le style du bouton actif (au premier plan) */
+.space-button.frozen {
+    z-index: 50; 
+    background: rgba(255, 255, 255, 0.3);
+    border-color: #fff;
 }
-@keyframes smoke-out {
-    0% {
-      opacity: 1;
-      filter: blur(0px);
-      transform: translate(0, 0);
-    }
-    25% {
-      opacity: 0.8;
-      filter: blur(2px);
-      transform: translateX(-5px) translateY(-10px) rotate(-2deg);
-    }
-    50% {
-      opacity: 0.5;
-      filter: blur(5px);
-      transform: translateX(10px) translateY(-20px) rotate(3deg);
-    }
-    75% {
-      opacity: 0.2;
-      filter: blur(8px);
-      transform: translateX(-15px) translateY(-30px) rotate(-5deg);
-    }
-    100% {
-      opacity: 0;
-      filter: blur(10px);
-      transform: translateX(20px) translateY(-40px) rotate(8deg);
-    }
-  }
-  
-  @keyframes smoke-in {
-    0% {
-      opacity: 0;
-      filter: blur(10px);
-      transform: translateX(20px) translateY(-40px) rotate(8deg);
-    }
-    25% {
-      opacity: 0.2;
-      filter: blur(8px);
-      transform: translateX(-15px) translateY(-30px) rotate(-5deg);
-    }
-    50% {
-      opacity: 0.5;
-      filter: blur(5px);
-      transform: translateX(10px) translateY(-20px) rotate(3deg);
-    }
-    75% {
-      opacity: 0.8;
-      filter: blur(2px);
-      transform: translateX(-5px) translateY(-10px) rotate(-2deg);
-    }
-    100% {
-      opacity: 1;
-      filter: blur(0px);
-      transform: translate(0, 0);
-    }
-  }
-  
-  .smoke-out {
-    animation: smoke-out 0.5s ease-out forwards;
-  }
-  
-  .smoke-in {
-    animation: smoke-in 0.5s ease-in forwards;
-  }
 
+/* On garde un petit effet visuel immédiat au survol simple pour dire "je t'ai vu" */
+.space-button:hover {
+    border-color: rgba(255, 255, 255, 0.8);
+}
