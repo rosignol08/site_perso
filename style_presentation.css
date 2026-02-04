@@ -664,32 +664,3 @@ input[type="checkbox"]:checked:before {
 .back-to-top:hover a .active{
     color: #e7e7e7;
 }
-.floating-space {
-    position: relative;
-    width: 100%;
-    height: 400px; /* Ajuste la hauteur selon tes besoins */
-    overflow: hidden;
-    border: 1px solid #ccc; /* Ajoute une bordure pour mieux voir l'espace */
-}
-
-.floating-rectangle {
-    position: absolute;
-    width: 100px;
-    height: 100px;
-    background-color: #3498db; /* Couleur des rectangles */
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: grab;
-    transition: background-color 0.3s ease;
-    user-select: none; /* Empêche la sélection du texte */
-}
-
-.floating-rectangle:hover {
-    background-color: #2980b9; /* Couleur au survol */
-}
-
-.floating-rectangle.dragging {
-    cursor: grabbing;
-}

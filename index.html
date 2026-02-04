@@ -9,16 +9,22 @@
 </head>
 
 <body>
-    <canvas id="canvas" width="800" height="600"></canvas>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "./js/three.module.min.js",
-                "gltf": "./js/GLTFLoader.js",
-                "three/addons/": "https://unpkg.com/three@latest/examples/jsm/"
-                
-        }
-    }
+    <canvas id="canvas"></canvas>
+    <div id="space-ui">
+    <a href="#" class="space-button" data-speed="1">PROJETS</a>
+    <a href="#" class="space-button" data-speed="0.8">CONTACT</a>
+    <a href="presentation_page.html" class="space-button" data-speed="1.2">A PROPOS</a>
+    </div>
+     <script type="importmap">
+         {
+             "imports": {
+                 "three": "./js/three.module.min.js",
+                 "gltf": "./js/GLTFLoader.js",
+                 "three/addons/": "https://unpkg.com/three@latest/examples/jsm/"
+                 
+         }
+     }
+    
     </script>
     <script type="module" src="./js/script_index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -36,7 +42,7 @@
         //  window.location.href = "chat_gchier.html";
         //}
     </script>
-
+    <div class="main"></div>
     <!--  
     <div id="text-container"></div>
         <p id="text-content">Premier texte affiché</p></div>
