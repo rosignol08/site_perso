@@ -1,114 +1,156 @@
 // --- CONFIGURATION ---
 const buttons = document.querySelectorAll('.space-button');
-const friction = 1.0; 
+const friction = 0.99999; 
 const bounceFactor = 0.9; 
-
-// Initialisation des objets
+const max_vitesse = 7.0;
+// Initialisation
 const floatingElements = Array.from(buttons).map(el => {
     const rect = el.getBoundingClientRect();
-    // On calcule un rayon approximatif (moyenne largeur/hauteur divisée par 2)
-    // On ajoute une petite marge (10px) pour qu'ils ne se chevauchent pas trop
-    const radius = (Math.max(rect.width, rect.height) / 2) * 0.8; 
+    const radius = (Math.max(rect.width, rect.height) / 2) * 0.85; 
 
-    // Position aléatoire sécurisée
-    const x = Math.random() * (window.innerWidth - rect.width);
-    const y = Math.random() * (window.innerHeight - rect.height);
-    
-    return {
+    const item = {
         el: el,
         width: rect.width,
         height: rect.height,
-        radius: radius, // Nouveau : Rayon de collision
-        x: x,
-        y: y,
+        radius: radius,
+        x: Math.random() * (window.innerWidth - rect.width),
+        y: Math.random() * (window.innerHeight - rect.height),
         vx: (Math.random() - 0.5) * 1.5,
         vy: (Math.random() - 0.5) * 1.5,
+        // Nouveaux paramètres pour le Timer
         isDragging: false,
+        isFrozen: false,     // L'état "arrêté"
+        hoverTimeout: null,  // Le chrono
+        savedVx: 0,          // Pour mémoriser la vitesse
+        savedVy: 0,
         lastMouseX: 0,
         lastMouseY: 0
     };
+
+    // --- GESTION DU TIMER 0.2s ---
+    el.addEventListener('mouseenter', () => {
+        // On lance le compte à rebours
+        item.hoverTimeout = setTimeout(() => {
+            item.isFrozen = true;
+            el.classList.add('frozen'); // Active le CSS (description)
+            
+            // On sauvegarde la vitesse actuelle pour la restituer plus tard
+            item.savedVx = item.vx;
+            item.savedVy = item.vy;
+            
+            // STOP !
+            item.vx = 0;
+            item.vy = 0;
+        }, 200); // 200ms = 0.2 secondes
+    });
+
+    el.addEventListener('mouseleave', () => {
+        // Si on part, on annule le chrono (si on est resté moins de 0.2s)
+        if (item.hoverTimeout) {
+            clearTimeout(item.hoverTimeout);
+            item.hoverTimeout = null;
+        }
+
+        // Si le bouton était arrêté, on le libère
+        if (item.isFrozen) {
+            item.isFrozen = false;
+            el.classList.remove('frozen');
+            
+            // On lui rend sa vitesse d'avant (pour qu'il reparte comme si de rien n'était)
+            item.vx = item.savedVx;
+            item.vy = item.savedVy;
+            
+            // Petite sécurité : s'il n'avait pas de vitesse, on lui donne une petite poussée
+            if (Math.abs(item.vx) < 0.1 && Math.abs(item.vy) < 0.1) {
+                item.vx = (Math.random() - 0.5);
+                item.vy = (Math.random() - 0.5);
+            }
+        }
+    });
+
+    return item;
 });
 
-// --- GESTION DES COLLISIONS ENTRE BOUTONS ---
+// --- GESTION DES COLLISIONS ---
 function handleCollisions() {
     for (let i = 0; i < floatingElements.length; i++) {
         for (let j = i + 1; j < floatingElements.length; j++) {
             const p1 = floatingElements[i];
             const p2 = floatingElements[j];
 
-            // Si l'un des deux est en train d'être dragué, on ignore la physique entre eux
-            // (Optionnel : tu peux l'enlever si tu veux pousser les autres avec celui que tu tiens)
             if (p1.isDragging || p2.isDragging) continue;
 
-            // Calcul du centre des boutons
-            const center1X = p1.x + p1.width / 2;
-            const center1Y = p1.y + p1.height / 2;
-            const center2X = p2.x + p2.width / 2;
-            const center2Y = p2.y + p2.height / 2;
-
-            // Distance entre les deux centres
-            const dx = center2X - center1X;
-            const dy = center2Y - center1Y;
+            const dx = (p2.x + p2.width/2) - (p1.x + p1.width/2);
+            const dy = (p2.y + p2.height/2) - (p1.y + p1.height/2);
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // Somme des rayons (distance minimale acceptable)
             const minDistance = p1.radius + p2.radius;
 
-            // --- COLLISION DÉTECTÉE ---
             if (distance < minDistance) {
-                
-                // 1. CALCUL DE L'ANGLE ET DE LA FORCE
                 const angle = Math.atan2(dy, dx);
                 const sin = Math.sin(angle);
                 const cos = Math.cos(angle);
-
-                // 2. SÉPARATION (Anti-Stick)
-                // On les repousse pour qu'ils ne se chevauchent plus
                 const overlap = minDistance - distance;
-                const separationX = overlap * cos * 0.5;
-                const separationY = overlap * sin * 0.5;
 
-                p1.x -= separationX;
-                p1.y -= separationY;
-                p2.x += separationX;
-                p2.y += separationY;
-
-                // 3. REBOND (Échange de vélocité)
-                // Rotation des vélocités
-                const v1 = { x: p1.vx * cos + p1.vy * sin, y: p1.vy * cos - p1.vx * sin };
-                const v2 = { x: p2.vx * cos + p2.vy * sin, y: p2.vy * cos - p2.vx * sin };
-
-                // Échange des vitesses sur l'axe de collision (x)
-                // v1.y et v2.y ne changent pas (tangente)
-                const vFinal1 = { x: v2.x, y: v1.y };
-                const vFinal2 = { x: v1.x, y: v2.y };
-
-                // Rotation inverse pour revenir aux axes normaux
-                p1.vx = vFinal1.x * cos - vFinal1.y * sin;
-                p1.vy = vFinal1.y * cos + vFinal1.x * sin;
-                p2.vx = vFinal2.x * cos - vFinal2.y * sin;
-                p2.vy = vFinal2.y * cos + vFinal2.x * sin;
+                // --- LOGIQUE MODIFIÉE : On utilise isFrozen ---
                 
-                // Petite perte d'énergie (bruit d'impact)
-                p1.vx *= bounceFactor; p1.vy *= bounceFactor;
-                p2.vx *= bounceFactor; p2.vy *= bounceFactor;
+                // Cas 1 : P1 est gelé (Mur) -> P2 rebondit
+                if (p1.isFrozen && !p2.isFrozen) {
+                    p2.x += overlap * cos;
+                    p2.y += overlap * sin;
+                    p2.vx = -p2.vx * bounceFactor;
+                    p2.vy = -p2.vy * bounceFactor;
+                }
+                // Cas 2 : P2 est gelé (Mur) -> P1 rebondit
+                else if (p2.isFrozen && !p1.isFrozen) {
+                    p1.x -= overlap * cos;
+                    p1.y -= overlap * sin;
+                    p1.vx = -p1.vx * bounceFactor;
+                    p1.vy = -p1.vy * bounceFactor;
+                }
+                // Cas 3 : Collision normale (personne n'est gelé ou les deux le sont)
+                else if (!p1.isFrozen && !p2.isFrozen) {
+                    const separationX = overlap * cos * 0.5;
+                    const separationY = overlap * sin * 0.5;
+                    p1.x -= separationX; p1.y -= separationY;
+                    p2.x += separationX; p2.y += separationY;
+
+                    const v1 = { x: p1.vx * cos + p1.vy * sin, y: p1.vy * cos - p1.vx * sin };
+                    const v2 = { x: p2.vx * cos + p2.vy * sin, y: p2.vy * cos - p2.vx * sin };
+                    const vFinal1 = { x: v2.x, y: v1.y };
+                    const vFinal2 = { x: v1.x, y: v2.y };
+
+                    p1.vx = (vFinal1.x * cos - vFinal1.y * sin) * bounceFactor;
+                    p1.vy = (vFinal1.y * cos + vFinal1.x * sin) * bounceFactor;
+                    p2.vx = (vFinal2.x * cos - vFinal2.y * sin) * bounceFactor;
+                    p2.vy = (vFinal2.y * cos + vFinal2.x * sin) * bounceFactor;
+                    // Limiter la vitesse maximale
+                    const speed1 = Math.sqrt(p1.vx * p1.vx + p1.vy * p1.vy);
+                    if (speed1 > max_vitesse) {
+                        p1.vx = (p1.vx / speed1) * max_vitesse;
+                        p1.vy = (p1.vy / speed1) * max_vitesse;
+                    }
+
+                    const speed2 = Math.sqrt(p2.vx * p2.vx + p2.vy * p2.vy);
+                    if (speed2 > max_vitesse) {
+                        p2.vx = (p2.vx / speed2) * max_vitesse;
+                        p2.vy = (p2.vy / speed2) * max_vitesse;
+                    }
+                }
             }
         }
     }
 }
 
-// --- BOUCLE D'ANIMATION ---
 function animate() {
-    
-    // Vérifier les collisions entre boutons AVANT de bouger
     handleCollisions();
 
     floatingElements.forEach(item => {
-        if (!item.isDragging) {
+        // On ne bouge pas si dragué OU si gelé par le timer
+        if (!item.isDragging && !item.isFrozen) {
             item.x += item.vx;
             item.y += item.vy;
 
-            // --- REBONDS MURS ---
+            // Rebond murs
             if (item.x + item.width >= window.innerWidth) {
                 item.vx *= -1;
                 item.x = window.innerWidth - item.width;
@@ -147,6 +189,11 @@ document.addEventListener('mousedown', (e) => {
     const targetItem = floatingElements.find(item => item.el === targetEl);
     if (targetItem) {
         e.preventDefault();
+        // Si on attrape un bouton gelé, on annule le gel pour pouvoir le bouger
+        if (targetItem.hoverTimeout) clearTimeout(targetItem.hoverTimeout);
+        targetItem.isFrozen = false;
+        targetItem.el.classList.remove('frozen');
+        
         activeItem = targetItem;
         activeItem.isDragging = true;
         activeItem.lastMouseX = e.clientX;
@@ -175,6 +222,7 @@ document.addEventListener('mouseup', () => {
     if (activeItem) {
         activeItem.isDragging = false;
         activeItem.el.style.cursor = 'grab';
+        
         const wasThrown = Math.abs(activeItem.vx) > 3 || Math.abs(activeItem.vy) > 3;
         if (wasThrown) {
             const clickHandler = (e) => {
