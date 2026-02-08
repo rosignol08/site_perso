@@ -86,6 +86,10 @@ function displayMessage(text, sender) {
 /**
  * Envoie le message de l'utilisateur au serveur.
  */
+
+// Générer un ID de session aléatoire pour cet onglet
+const SESSION_ID = "user_" + Math.random().toString(36).substring(7);
+
 async function sendMessage() {
     const prompt = userInput.value.trim();
     if (!prompt) return;
@@ -97,8 +101,8 @@ async function sendMessage() {
     statusMessage.textContent = 'Envoi du message...';
     displayMessage(prompt, 'user');
 
-    console.log(`DEBUG: Envoi de la requête au serveur : ${API_URL}/chat/ avec le prompt : "${prompt}"`);
-    const systemInstruction = "\nRéponds en français et en mode drague en surnommant l'utilisateur 'princesse'.";
+    console.log(`DEBUG: Envoi de la requête au serveur : ${API_URL}/chat/?session_id=${SESSION_ID} avec le prompt : "${prompt}"`);
+    const systemInstruction = "\nRéponds en français ."; //et en mode drague en surnommant l'utilisateur 'princesse'
     const finalPrompt = prompt + systemInstruction;
     
     console.log("DEBUG: Prompt final envoyé :", finalPrompt);
@@ -113,7 +117,7 @@ async function sendMessage() {
         statusMessage.textContent = 'Réflexion...';
 
         // 3. Appel à l'API
-        const response = await fetch(`${API_URL}/chat/`, {
+        const response = await fetch(`${API_URL}/chat/?session_id=${SESSION_ID}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
