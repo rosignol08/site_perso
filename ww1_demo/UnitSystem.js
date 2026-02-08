@@ -10,10 +10,10 @@ class UnitSystem {
         this.trenches = []; 
 
         // CONFIGURATION DES BASES
-        // Bleu : Commence à X=-80 et avance vers la droite (+1)
+        // Bleu :
         this.managerBlue = new ConstructionManager(scene, terrain, 0, -80, 1);
         
-        // Rouge : Commence à X=+80 et avance vers la gauche (-1)
+        // Rouge :
         this.managerRed = new ConstructionManager(scene, terrain, 1, 80, -1);
     }
 

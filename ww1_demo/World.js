@@ -50,16 +50,16 @@ const artillery = new ArtillerySystem(scene, audiolistener, terrain);
 
 // 3. Spawning (Création des unités)
 // Equipe 0 (Bleus) à Gauche (X négatif)
-//for(let i = 0; i < nombre_soldats_par_equipe; i++) {
-//    // Note: on utilise 'artillery' (le nom de ta constante)
-//    artillery.spawnUnit(terrain.size / -2 + Math.random()*10, (Math.random()-0.5)*40, 0); 
-//}
-//
-//// Equipe 1 (Rouges) à Droite (X positif)
-//for(let i = 0; i < nombre_soldats_par_equipe; i++) {
-//    artillery.spawnUnit(terrain.size / 2 - Math.random()*10, (Math.random()-0.5)*40, 1);
-//}
-// Bleus (fond de map gauche)
+for(let i = 0; i < 10; i++) {
+    // Note: on utilise 'artillery' (le nom de ta constante)
+    artillery.spawnUnit(terrain.size / -2.3, (Math.random()-0.5)*40, 0); 
+}
+
+// Equipe 1 (Rouges) à Droite (X positif)
+for(let i = 0; i < 10; i++) {
+    artillery.spawnUnit(terrain.size / 2.3, (Math.random()-0.5)*40, 1);
+}
+ //Bleus (fond de map gauche)
 
 // Rouges (fond de map droit)
 // 4. Rendu & Lumière
@@ -103,7 +103,8 @@ const onKeyDown = (event) => {
     case 'KeyC': // 'C' pour Charge !
         console.log("ORDRE DE CHARGE DONNÉ !");
         // Les bleus attaquent !
-        unitSystem.triggerCharge(0); 
+        unitSystem.triggerCharge(0);
+        unitSystem.triggerCharge(1);
         break;
   }
 };
@@ -166,7 +167,7 @@ function animate() {
     }
 
     // Mouvements Caméra
-    const moveSpeed = 20 * deltaTime;
+    const moveSpeed = 40 * deltaTime;
     if (moveState.forward) controls.moveForward(moveSpeed);
     if (moveState.backward) controls.moveForward(-moveSpeed);
     if (moveState.left) controls.moveRight(-moveSpeed);
