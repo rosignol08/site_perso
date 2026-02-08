@@ -102,7 +102,7 @@ async function sendMessage() {
     displayMessage(prompt, 'user');
 
     console.log(`DEBUG: Envoi de la requête au serveur : ${API_URL}/chat/?session_id=${SESSION_ID} avec le prompt : "${prompt}"`);
-    const systemInstruction = "\nRéponds en français et en mode drague en surnommant l'utilisateur 'princesse'.";
+    const systemInstruction = "\nRéponds en français ."; //et en mode drague en surnommant l'utilisateur 'princesse'
     const finalPrompt = prompt + systemInstruction;
     
     console.log("DEBUG: Prompt final envoyé :", finalPrompt);
