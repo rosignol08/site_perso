@@ -7,11 +7,11 @@ class Trench {
         this.type = type;
         
         if (this.type === 'BUNKER') {
-            this.occupancyMax = 5; // Combien de tireurs une fois fini
+            this.occupancyMax = 2; // Combien de tireurs une fois fini
             this.builderMax = 4;   // Combien de constructeurs en même temps
             this.length = 8;
             this.width = 4;
-            this.depthMax = 3.5;
+            this.depthMax = 2.0;
         } else {
             this.occupancyMax = 3;
             this.builderMax = 2; // 2 soldats peuvent creuser une tranchée ensemble

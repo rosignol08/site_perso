@@ -321,7 +321,7 @@ moveTo(targetPos, deltaTime) {
 
 updateHeight(terrainMesh) {
     const origin = this.mesh.position.clone();
-    origin.y += 20;
+    origin.y += 30;
     this.raycaster.set(origin, this.downVector);
     // Grâce au BVH, ceci est ultra rapide
     const intersects = this.raycaster.intersectObject(terrainMesh);

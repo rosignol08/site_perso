@@ -58,7 +58,7 @@ class ConstructionManager {
             // Plus on avance vers le front, plus on fait de tranchées et moins de bunkers
             // Ligne 0 (Base) = Bunkers
             // Ligne 5 (Front) = Tranchées
-            const bunkerChance = 0.0;//Math.max(0.1, 0.8 - (this.linesBuilt * 0.1));
+            const bunkerChance = Math.max(0.1, 0.8 - (this.linesBuilt * 0.1));
             const type = (Math.random() < bunkerChance) ? 'BUNKER' : 'TRENCH';
             
             // On ajoute un peu d'aléatoire sur X pour pas faire une ligne trop droite (plus naturel)
