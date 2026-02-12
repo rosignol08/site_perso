@@ -15,7 +15,8 @@ class AssetManager {
         // Charge tous les fichiers en parallèle
         // Remplace les chemins par tes vrais fichiers !
         const [soldier, idle, run, shoot, dig] = await Promise.all([
-            this.loadFBX('./assets/soldier.fbx'), // Le corps
+            this.loadFBX('./assets/soldats.fbx'), // Le corps rigged-and-textured-mid-poly-soldier/source/
+
             this.loadFBX('./assets/idle.fbx'),    // Anim Idle
             this.loadFBX('./assets/run.fbx'),     // Anim Run
             this.loadFBX('./assets/shoot.fbx'),   // Anim Shoot
@@ -81,3 +82,5 @@ class AssetManager {
 }
 
 export const assetManager = new AssetManager();
+
+//export default AssetManager;

@@ -25,41 +25,11 @@ camera.position.set(0, 30, 60); // Un peu plus haut pour bien voir
 const audiolistener = new THREE.AudioListener();
 camera.add(audiolistener);
 
-
-
-// On charge d'abord les FBX
-assetManager.loadResources().then(() => {
-    console.log("Chargement terminé !");
-    
-    // Spawn initial pour tester
-    unitSystem.spawnUnit(-90, (Math.random()-0.5)*50, 0);
-    unitSystem.spawnUnit(90, (Math.random()-0.5)*50, 1);
-
-    // Lance la boucle
-    animate();
-});
-
-
-
 // 2. Instanciation des Systèmes
 const terrain = new Terrain(scene);
 const vegetation = new Vegetation(scene, 3000, terrain.size); // 3000 arbres
 
 const unitSystem = new UnitSystem(scene, terrain);
-
-// Spawn Bleus (Equipe 0)
-for(let i=0; i<nombre_soldats_par_equipe; i++) {
-    //unitSystem.spawnUnit(terrain.size / -2 + Math.random()*10, (Math.random()-0.5)*20, 0);
-    unitSystem.spawnUnit(-90, (Math.random()-0.5)*50, 0);
-
-}
-
-// Spawn Rouges (Equipe 1)
-for(let i=0; i<nombre_soldats_par_equipe; i++) {
-    //unitSystem.spawnUnit(terrain.size / 2 - Math.random()*10, (Math.random()-0.5)*20, 1);
-    unitSystem.spawnUnit(90, (Math.random()-0.5)*50, 1);
-
-}
 
 // L'Artillerie gère les canons ET les obus
 const artillery = new ArtillerySystem(scene, audiolistener, terrain);
@@ -75,9 +45,7 @@ for(let i = 0; i < 10; i++) {
 for(let i = 0; i < 10; i++) {
     artillery.spawnUnit(terrain.size / 2.3, (Math.random()-0.5)*40, 1);
 }
- //Bleus (fond de map gauche)
 
-// Rouges (fond de map droit)
 // 4. Rendu & Lumière
 const renderer = new THREE.WebGLRenderer({ antialias: true }); // Antialias pour que ce soit plus joli
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -157,6 +125,24 @@ fpsDisplay.style.zIndex = '1000';
 document.body.appendChild(fpsDisplay);
 let time = 0;
 
+// On charge d'abord les FBX, puis on spawn les unités
+assetManager.loadResources().then(() => {
+    console.log("Chargement terminé !");
+    
+    // Spawn Bleus (Equipe 0)
+    for(let i=0; i<nombre_soldats_par_equipe; i++) {
+        unitSystem.spawnUnit(-90, (Math.random()-0.5)*50, 0);
+    }
+
+    // Spawn Rouges (Equipe 1)
+    for(let i=0; i<nombre_soldats_par_equipe; i++) {
+        unitSystem.spawnUnit(90, (Math.random()-0.5)*50, 1);
+    }
+
+    // Lance la boucle d'animation
+    animate();
+});
+
 function animate() {
     const deltaTime = clock.getDelta();
     time += deltaTime;
@@ -222,8 +208,6 @@ function animate() {
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
 }
-
-animate();
 
 // Gestion redimensionnement fenêtre
 window.addEventListener('resize', () => {

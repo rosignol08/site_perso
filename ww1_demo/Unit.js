@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import Rifle from './Rifle.js';
+import { assetManager } from './AssetManager.js';
 
 class Unit {
     constructor(scene, startPosition, team, unitSystem) {

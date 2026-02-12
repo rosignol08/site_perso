@@ -14,8 +14,19 @@
   </style>
 </head>
 <body>
+  <!-- Import map MUST come before any module scripts -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/examples/": "https://unpkg.com/three@0.160.0/examples/",
+        "fflate": "https://unpkg.com/fflate@0.8.0/esm/browser.js"
+      }
+    }
+  </script>
+
   <!-- CDN Three.js (module) -->
-   <script type="module">
+  <script type="module">
     import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'https://unpkg.com/three-mesh-bvh@0.7.3/build/index.module.js';
     import * as THREE from 'three';
 
@@ -23,16 +34,6 @@
     THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
     THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
     THREE.Mesh.prototype.raycast = acceleratedRaycast;
-</script>
-
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/examples/": "https://unpkg.com/three@0.160.0/examples/"
-        "fflate": "https://unpkg.com/fflate@0.8.0/esm/browser.js"
-      }
-    }
   </script>
   <!-- <script type="module"> -->
   <!-- import Stats from "https://unpkg.com/three@0.160.0/examples/jsm/libs/stats.module.js"; -->
@@ -41,6 +42,7 @@
   <!-- document.body.appendChild(stats.dom); -->
   <!-- </script> 
    credits : "Rigged and Textured Mid-Poly Soldier" (https://skfb.ly/6oWtJ) by DenisAlbu is licensed under Creative Commons Attribution-ShareAlike (http://creativecommons.org/licenses/by-sa/4.0/).
+   "Futuristic soldier (lowpoly)" (https://skfb.ly/oSVPA) by SlagPerch 3D is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
    -->
 
   
