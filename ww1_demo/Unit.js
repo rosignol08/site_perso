@@ -13,12 +13,12 @@ class Unit {
 
         this.hp = 100;
         this.isDead = false;
-        this.rifle = new Rifle(scene, this);
 
         // --- VISUEL ---
         this.mesh = new THREE.Group();
         const color = team === 0 ? 0x0000FF : 0xFF0000;
         const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.7, 8), new THREE.MeshStandardMaterial({ color: color }));
+        AnimationMixer
         body.position.y = 0.85;
         body.castShadow = true;
         this.mesh.add(body);
@@ -27,6 +27,9 @@ class Unit {
         this.mesh.add(head);
         this.mesh.position.copy(startPosition);
         scene.add(this.mesh);
+        
+        // Création du rifle APRÈS le mesh pour qu'il puisse s'y attacher
+        this.rifle = new Rifle(scene, this);
 
         // --- LOGIQUE ---
         this.speed = 7.0 + Math.random(); 
@@ -71,6 +74,8 @@ class Unit {
             case 'DEFENDING':
                 this.behaviorDefend(deltaTime);
                 break;
+            case 'COMBAT':
+                this.behaviorCombat(deltaTime);
         }
     }
 
