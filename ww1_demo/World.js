@@ -6,7 +6,7 @@ import ArtillerySystem from './ArtillerySystem.js';
 import Vegetation from './Vegetation.js';
 import UnitSystem from './UnitSystem.js';
 
-
+import { assetManager } from './AssetManager.js';
 
 const nombre_soldats_par_equipe = 50;
 
@@ -24,6 +24,22 @@ camera.position.set(0, 30, 60); // Un peu plus haut pour bien voir
 // Audio Listener (Les oreilles)
 const audiolistener = new THREE.AudioListener();
 camera.add(audiolistener);
+
+
+
+// On charge d'abord les FBX
+assetManager.loadResources().then(() => {
+    console.log("Chargement terminé !");
+    
+    // Spawn initial pour tester
+    unitSystem.spawnUnit(-90, (Math.random()-0.5)*50, 0);
+    unitSystem.spawnUnit(90, (Math.random()-0.5)*50, 1);
+
+    // Lance la boucle
+    animate();
+});
+
+
 
 // 2. Instanciation des Systèmes
 const terrain = new Terrain(scene);

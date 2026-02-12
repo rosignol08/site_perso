@@ -14,26 +14,48 @@ class Unit {
         this.hp = 100;
         this.isDead = false;
 
-        // --- VISUEL ---
-        this.mesh = new THREE.Group();
-        const color = team === 0 ? 0x0000FF : 0xFF0000;
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.7, 8), new THREE.MeshStandardMaterial({ color: color }));
-        AnimationMixer
-        body.position.y = 0.85;
-        body.castShadow = true;
-        this.mesh.add(body);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({ color: 0x333333 }));
-        head.position.y = 1.9;
-        this.mesh.add(head);
+       // --- VISUEL 3D ---
+        // On récupère le modèle depuis l'AssetManager
+        const asset = assetManager.getSoldierInstance();
+        this.mesh = asset.mesh;
+        
+        // Couleur d'équipe
+        const teamColor = team === 0 ? 0x0000FF : 0xFF0000;
+        
+        // On parcourt le modèle pour trouver le maillage du corps et le colorier
+        this.mesh.traverse((child) => {
+            if (child.isMesh) {
+                // IMPORTANT: Cloner le material pour que chaque soldat ait sa couleur
+                child.material = child.material.clone();
+                // On garde la texture s'il y en a une, mais on teinte
+                child.material.color.setHex(teamColor);
+            }
+        });
+
         this.mesh.position.copy(startPosition);
         scene.add(this.mesh);
         
-        // Création du rifle APRÈS le mesh pour qu'il puisse s'y attacher
-        this.rifle = new Rifle(scene, this);
+        // --- ANIMATIONS ---
+        this.mixer = new THREE.AnimationMixer(this.mesh);
+        this.actions = {}; // Pour stocker les actions (Idle, Run...)
+
+        // On lie les clips chargés aux actions du mixer
+        asset.animations.forEach((clip) => {
+            const action = this.mixer.clipAction(clip);
+            this.actions[clip.name] = action;
+        });
+
+        // Lancer l'animation par défaut
+        this.activeAction = this.actions['Idle'];
+        if(this.activeAction) this.activeAction.play();
 
         // --- LOGIQUE ---
-        this.speed = 7.0 + Math.random(); 
-        this.state = 'IDLE'; 
+        this.rifle = new Rifle(scene, this); 
+        // NOTE: Idéalement il faudrait attacher le rifle à l'os de la main (RightHand)
+        // Pour l'instant il flottera ou suivra le centre, on pourra l'améliorer.
+
+        this.speed = 4.0 + Math.random(); // Vitesse un peu ajustée pour l'anim de course
+        this.state = 'IDLE';
         
         this.currentTask = null; // { type: 'BUILD'|'DEFEND', target: Trench }
         
@@ -44,38 +66,68 @@ class Unit {
         this.combatRange = 40;
     }
 
+    // Fonction pour changer d'animation en douceur
+    fadeToAction(name, duration = 0.2) {
+        const nextAction = this.actions[name];
+        if (!nextAction || this.activeAction === nextAction) return;
+
+        // Si l'anim n'existe pas (ex: pas de 'Dig'), on fallback sur 'Idle'
+        if (!nextAction) {
+            console.warn(`Animation ${name} manquante`);
+            return;
+        }
+
+        nextAction.reset();
+        nextAction.setEffectiveTimeScale(1);
+        nextAction.setEffectiveWeight(1);
+        
+        // Transition fluide
+        nextAction.crossFadeFrom(this.activeAction, duration, true);
+        nextAction.play();
+        
+        this.activeAction = nextAction;
+    }
+
     update(deltaTime, terrainMesh) {
         if (this.isDead) return;
 
+        // 1. Mise à jour de l'animation
+        if (this.mixer) this.mixer.update(deltaTime);
+
+        // 2. Physique
         this.updateHeight(terrainMesh);
         this.rifle.update(deltaTime);
 
-        // Priorité absolue : Si je suis en CHARGING, je fonce
+        // 3. Gestion des États -> Animations
+        // On détermine quelle animation jouer selon l'état
+        if (this.state === 'MOVING' || this.state === 'CHARGING') {
+            this.fadeToAction('Run');
+        } 
+        else if (this.state === 'BUILDING') {
+            this.fadeToAction('Dig'); 
+        } 
+        else if (this.state === 'COMBAT' || (this.state === 'DEFENDING' && this.targetEnemy)) {
+            this.fadeToAction('Shoot');
+        } 
+        else {
+            this.fadeToAction('Idle');
+        }
+
+        // 4. Logique Comportementale
         if (this.state === 'CHARGING') {
             this.behaviorCharge(deltaTime);
             return;
         }
-        // --- 1. INSTINCT DE SURVIE (PRIORITÉ ABSOLUE) ---
-        // Sauf si on charge déjà (car on tire en courant)
         if (this.state !== 'CHARGING' && this.state !== 'COMBAT') {
             this.scanForThreats();
         }
 
         switch (this.state) {
-            case 'IDLE':
-                this.behaviorIdle();
-                break;
-            case 'MOVING':
-                this.behaviorMove(deltaTime);
-                break;
-            case 'BUILDING':
-                this.behaviorBuild(deltaTime);
-                break;
-            case 'DEFENDING':
-                this.behaviorDefend(deltaTime);
-                break;
-            case 'COMBAT':
-                this.behaviorCombat(deltaTime);
+            case 'IDLE':      this.behaviorIdle(); break;
+            case 'MOVING':    this.behaviorMove(deltaTime); break;
+            case 'BUILDING':  this.behaviorBuild(deltaTime); break;
+            case 'DEFENDING': this.behaviorDefend(deltaTime); break;
+            case 'COMBAT':    this.behaviorCombat(deltaTime); break;
         }
     }
 
@@ -124,17 +176,13 @@ class Unit {
     }
 
     behaviorCombat(deltaTime) {
-        // Si la cible est morte ou trop loin, on retourne au boulot
         if (!this.targetEnemy || this.targetEnemy.isDead || this.mesh.position.distanceTo(this.targetEnemy.mesh.position) > this.combatRange * 1.5) {
             this.targetEnemy = null;
-            this.state = 'IDLE'; // On redemandera une tâche au manager
+            this.state = 'IDLE';
             return;
         }
 
-        // 1. Regarder l'ennemi
         this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
-
-        // 2. Tirer
         this.rifle.shoot(this.targetEnemy);
         //si on est trop proche on recule un peu
         const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
@@ -196,24 +244,15 @@ class Unit {
 
     behaviorBuild(deltaTime) {
         const structure = this.currentTask?.target;
-        
-        // Si pas de structure ou si elle est finie
         if (!structure || structure.isFinished) {
-            // 1. On démissionne du poste de constructeur actuel
             if (structure) structure.removeBuilder(this);
-            
-            // 2. IMPORTANT : On oublie la tâche et on repasse en IDLE
-            // Cela va forcer le 'update' suivant à relancer behaviorIdle()
-            // qui va appeler manager.assignTask() et trouver le prochain chantier !
             this.currentTask = null;
             this.state = 'IDLE';
             return;
         }
-
-        // Animation
-        this.mesh.rotation.y += deltaTime * 5;
         
-        // Optimisation pelle
+        // On tourne le perso pour faire face au chantier si nécessaire (optionnel)
+        
         this.digTimer = (this.digTimer || 0) + deltaTime;
         if (this.digTimer > 0.1) {
             const speed = structure.type === 'BUNKER' ? 0.01 : 0.05; 
@@ -325,31 +364,30 @@ moveTo(targetPos, deltaTime) {
 }
 
 updateHeight(terrainMesh) {
-    const origin = this.mesh.position.clone();
-    origin.y += 30;
-    this.raycaster.set(origin, this.downVector);
-    // Grâce au BVH, ceci est ultra rapide
-    const intersects = this.raycaster.intersectObject(terrainMesh);
-    if (intersects.length > 0) {
-        this.mesh.position.y = intersects[0].point.y;
-    }
-}
-    
-takeDamage(amount) {
-    this.hp -= amount;
-    if (this.hp <= 0 && !this.isDead) {
-        this.isDead = true;
-        this.mesh.rotation.x = -Math.PI/2; // Couché
-        this.mesh.position.y -= 0.2;
-        this.mesh.children.forEach(c => c.material.color.setHex(0x555555));
-        
-        // Libérer la place dans la tranchée si on meurt dedans
-        // (À implémenter dans Trench.js : removeOccupant)
-        if (this.assignedTrench) {
-            this.assignedTrench.removeOccupant(this);
+        const origin = this.mesh.position.clone();
+        origin.y += 30;
+        this.raycaster.set(origin, this.downVector);
+        const intersects = this.raycaster.intersectObject(terrainMesh);
+        if (intersects.length > 0) {
+            this.mesh.position.y = intersects[0].point.y;
         }
     }
-}
+takeDamage(amount) {
+        this.hp -= amount;
+        if (this.hp <= 0 && !this.isDead) {
+            this.isDead = true;
+            // Animation de mort ? Si tu en as une, joue-la : this.fadeToAction('Die');
+            // Sinon on fait simple :
+            this.fadeToAction('Idle'); // Stop run
+            this.mesh.rotation.x = -Math.PI/2; 
+            this.mesh.position.y -= 0.2;
+            
+            // On peut arrêter le mixer pour figer la pose
+            // this.mixer.stopAllAction();
+            
+            if (this.assignedTrench) this.assignedTrench.removeOccupant(this);
+        }
+    }
 }
 
 export default Unit;

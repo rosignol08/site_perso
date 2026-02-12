@@ -1,26 +1,83 @@
-//import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
-
-//classe pour charger des objet 3D
 import * as THREE from 'three';
-// Load model and animations
-const loader = new THREE.GLTFLoader();
-loader.load('model.glb', (gltf) => {
-   const model = gltf.scene;
-   scene.add(model);
-   // Create mixer for the model
-   const mixer = new THREE.AnimationMixer(model);
-   // Get an animation clip and create an action
-   const clip = gltf.animations[0];
-   const action = mixer.clipAction(clip);
-   // Play the animation
-   action.play();
-   // Animation loop
-   const clock = new THREE.Clock();
-   function animate() {
-       requestAnimationFrame(animate);
-       const delta = clock.getDelta();
-       mixer.update(delta); // Advance animations
-       renderer.render(scene, camera);
-   }
-   animate();
-});
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+
+class AssetManager {
+    constructor() {
+        this.loader = new FBXLoader();
+        this.soldierMesh = null; // Le modèle visuel de référence
+        this.animations = [];    // La liste combinée des animations
+    }
+
+    async loadResources() {
+        console.log("Chargement des assets 3D...");
+
+        // Charge tous les fichiers en parallèle
+        // Remplace les chemins par tes vrais fichiers !
+        const [soldier, idle, run, shoot, dig] = await Promise.all([
+            this.loadFBX('./assets/soldier.fbx'), // Le corps
+            this.loadFBX('./assets/idle.fbx'),    // Anim Idle
+            this.loadFBX('./assets/run.fbx'),     // Anim Run
+            this.loadFBX('./assets/shoot.fbx'),   // Anim Shoot
+            this.loadFBX('./assets/dig.fbx')      // Anim Dig (ou reload ou autre)
+        ]);
+
+        // 1. Préparer le Mesh (Le corps)
+        this.soldierMesh = soldier;
+        
+        // Ajuste l'échelle (Les FBX sont souvent x100 ou x0.01)
+        // Modifie cette valeur si ton soldat est géant ou minuscule !
+        this.soldierMesh.scale.set(0.01, 0.01, 0.01); 
+
+        // Activer les ombres
+        this.soldierMesh.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+
+        // 2. Extraire et Nommer les animations
+        this.animations = [];
+
+        // Fonction utilitaire pour extraire l'anim d'un fichier FBX
+        const addClip = (obj, name) => {
+            if (obj.animations && obj.animations.length > 0) {
+                const clip = obj.animations[0];
+                clip.name = name; // On la renomme pour Unit.js
+                this.animations.push(clip);
+            }
+        };
+
+        addClip(idle, 'Idle');
+        addClip(run, 'Run');
+        addClip(shoot, 'Shoot');
+        addClip(dig, 'Dig');
+
+        console.log("Assets chargés avec succès :", this.animations.map(a => a.name));
+    }
+
+    loadFBX(url) {
+        return new Promise((resolve, reject) => {
+            this.loader.load(url, resolve, undefined, reject);
+        });
+    }
+
+    // Cette fonction clone le soldat pour en créer une armée
+    getSoldierInstance() {
+        if (!this.soldierMesh) {
+            console.error("Erreur: Assets non chargés avant le spawn !");
+            return null;
+        }
+
+        // CLONAGE SPÉCIAL POUR LES SQUELETTES
+        const clone = SkeletonUtils.clone(this.soldierMesh);
+
+        return {
+            mesh: clone,
+            animations: this.animations // On partage les anims (pas besoin de cloner les données d'anim)
+        };
+    }
+}
+
+export const assetManager = new AssetManager();
