@@ -35,7 +35,7 @@ class Terrain {
     
     // Optimisation : On ne bouge jamais le terrain globalement
     this.mesh.matrixAutoUpdate = false; 
-    this.mesh.updateMatrix(); 
+    this.mesh.updateMatrix();
     
     scene.add(this.mesh);
   }

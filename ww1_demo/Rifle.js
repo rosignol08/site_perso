@@ -16,9 +16,10 @@ class Rifle {
         const geo = new THREE.BoxGeometry(0.1, 0.1, 1.2);
         const mat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
         this.mesh = new THREE.Mesh(geo, mat);
-        this.mesh.position.set(0.3, 1.2, 0.4); // Position "dans les mains"
+        this.mesh.position.set(0.3, 15, 2.4); // Position "dans les mains"
         // Attaché au soldat (seulement si le mesh existe)
         if (this.owner.mesh) {
+            this.mesh.scale.set(10,10,10); // Ajuster la taille du fusil
             this.owner.mesh.add(this.mesh);
         }
     }

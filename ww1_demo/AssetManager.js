@@ -14,9 +14,10 @@ class AssetManager {
 
         // Charge tous les fichiers en parallèle
         // Remplace les chemins par tes vrais fichiers !
+        //credits "British Solider 3D Model *Rigged*" (https://skfb.ly/6VJYG) by ThrillDaWill is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
         const [soldier, idle, run, shoot, dig] = await Promise.all([
-            this.loadFBX('./assets/soldats.fbx'), // Le corps rigged-and-textured-mid-poly-soldier/source/
-
+            //this.loadFBX('./assets/soldats.fbx'), // Le corps rigged-and-textured-mid-poly-soldier/source/
+            this.loadFBX('./assets/English Soilder/sold.fbx'),
             this.loadFBX('./assets/idle.fbx'),    // Anim Idle
             this.loadFBX('./assets/run.fbx'),     // Anim Run
             this.loadFBX('./assets/shoot.fbx'),   // Anim Shoot
@@ -28,7 +29,7 @@ class AssetManager {
         
         // Ajuste l'échelle (Les FBX sont souvent x100 ou x0.01)
         // Modifie cette valeur si ton soldat est géant ou minuscule !
-        this.soldierMesh.scale.set(0.01, 0.01, 0.01); 
+        this.soldierMesh.scale.set(0.1, 0.1, 0.1); 
 
         // Activer les ombres
         this.soldierMesh.traverse((child) => {

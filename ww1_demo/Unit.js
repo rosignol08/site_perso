@@ -57,6 +57,8 @@ class Unit {
 
         this.speed = 4.0 + Math.random(); // Vitesse un peu ajustée pour l'anim de course
         this.state = 'IDLE';
+
+        this.maxSlopeAngle = 90; // Angle max de pente (en degrés)
         
         this.currentTask = null; // { type: 'BUILD'|'DEFEND', target: Trench }
         
@@ -65,6 +67,11 @@ class Unit {
         this.downVector = new THREE.Vector3(0, -1, 0);
 
         this.combatRange = 40;
+        
+        // --- DÉBLOCAGE AUTO ---
+        this.lastPos = startPosition.clone();
+        this.stuckTimer = 0;
+        this.stuckThreshold = 1.5; // Temps avant déblocage (en secondes)
     }
 
     // Fonction pour changer d'animation en douceur
@@ -356,21 +363,96 @@ behaviorCharge(deltaTime) {
 }
 
 // --- OUTILS ---
+//moveTo(targetPos, deltaTime) {
+//    const dir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
+//    dir.y = 0; 
+//    dir.normalize();
+//    this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
+//    this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
+//}
+
 moveTo(targetPos, deltaTime) {
     const dir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
-    dir.y = 0; 
+    
+    // Calculer la distance 3D réelle (avec pentes)
+    const distance3D = dir.length();
     dir.normalize();
+    
+    // Vérifier la pente avant de monter
+    const slopeAngle = Math.atan2(Math.abs(dir.y), 
+        Math.hypot(dir.x, dir.z)) * (180 / Math.PI);
+    
+    // Si pente trop aigué, limiter la montée
+    if (slopeAngle > this.maxSlopeAngle) {
+        dir.y *= 0.5; // Réduire la montée
+    }
+    
+    dir.normalize(); // Renormaliser après ajustement
     this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
     this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
+    
+    // --- DÉTECTION DE BLOCAGE ---
+    const movementDist = new THREE.Vector3(this.mesh.position.x, 0, this.mesh.position.z).distanceTo(new THREE.Vector3(this.lastPos.x, 0, this.lastPos.z));
+    
+    if (movementDist < 0.01) { // Pas vraiment bougé
+        //console.log("j'ai pas avance asser seulement " + movementDist);
+        this.stuckTimer += deltaTime;
+        
+        if (this.stuckTimer > this.stuckThreshold) {
+            // DÉBLOCAGE : pousser de côté OU en avant selon ce qui fonctionne
+            const pushDir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
+            console.log("je suis bloque, je pousse dans la direction " + pushDir.x + " " + pushDir.y + " " + pushDir.z);
+            pushDir.normalize();
+            
+            // Créer une direction perpendiculaire pour sortir du blocage
+            const perpDir = new THREE.Vector3(-pushDir.z, pushDir.y, pushDir.x);
+            
+            // Alterner entre avant et côté pour pousser vraiment
+            const forceDir = (this.stuckTimer % 2) > 1 ? pushDir : perpDir;
+            
+            this.mesh.position.addScaledVector(forceDir, 0.8); // Pousser plus fortement
+            this.stuckTimer = 0; // Réinitialiser le timer
+        }
+    } else {
+        // A bougé normalement
+        this.stuckTimer = 0;
+    }
+    
+    // Actualiser la dernière position
+    this.lastPos.copy(this.mesh.position);
 }
 
 updateHeight(terrainMesh) {
-        const origin = this.mesh.position.clone();
-        origin.y += 30;
-        this.raycaster.set(origin, this.downVector);
-        const intersects = this.raycaster.intersectObject(terrainMesh);
-        if (intersects.length > 0) {
-            this.mesh.position.y = intersects[0].point.y;
+        // Faire plusieurs raycasts autour du personnage pour éviter les arêtes
+        const raycastRadius = 3.5; //3.5 pour plus de marge
+        const numRays = 2; // Centre + 4 autour 8 pour plus de précision
+        const heights = [];
+        
+        for (let i = 0; i < numRays; i++) {
+            let origin = this.mesh.position.clone();
+            
+            // Premier rayon au centre, puis 4 autour
+            if (i > 0) {
+                const angle = (i - 1) * (Math.PI * 2 / 4);
+                origin.x += Math.cos(angle) * raycastRadius;
+                origin.z += Math.sin(angle) * raycastRadius;
+            }
+            
+            origin.y += 30;
+            this.raycaster.set(origin, this.downVector);
+            const intersects = this.raycaster.intersectObject(terrainMesh);
+            
+            if (intersects.length > 0) {
+                heights.push(intersects[0].point.y);
+            }
+        }
+        
+        // Prendre la hauteur médiane pour éviter les pics/creux des arêtes
+        if (heights.length > 0) {
+            heights.sort((a, b) => a - b);
+            const medianHeight = heights[Math.floor(heights.length / 2)];
+            // Transition douce pour éviter les sauts
+            this.mesh.position.y += (medianHeight - this.mesh.position.y) * 0.7; //0.8 pour plus de réactivité
         }
     }
 takeDamage(amount) {
