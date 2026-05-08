@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Routage Distribué (Chandy-Misra / Bellman-Ford)</title>
+    <style>
+        :root {
+            --bg: #111827;
+            --panel: #1f2937;
+            --text: #f3f4f6;
+            --accent: #10b981;
+            --accent-hover: #059669;
+            --node-bg: #374151;
+            --msg: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1, h2 { color: var(--accent); text-align: center; }
+
+        .container { max-width: 900px; width: 100%; }
+
+        .card {
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        pre {
+            background: #000;
+            padding: 15px;
+            border-radius: 8px;
+            color: #6ee7b7;
+            overflow-x: auto;
+            border-left: 4px solid var(--accent);
+        }
+        .comment { color: #6b7280; font-style: italic; }
+        .keyword { color: #c084fc; font-weight: bold; }
+
+        /* Réseau interactif */
+        .network {
+            position: relative;
+            height: 350px;
+            background: #000;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .node {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: var(--node-bg);
+            border: 3px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s;
+        }
+
+        .node.updated {
+            background: var(--accent);
+            color: #000;
+            box-shadow: 0 0 20px var(--accent);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .distance { font-size: 0.8em; font-weight: normal; margin-top: 5px; color: #fbbf24; }
+        .node.updated .distance { color: #000; font-weight: bold; }
+
+        /* Lignes et poids */
+        svg { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 1; }
+        line { stroke: #4b5563; stroke-width: 3; }
+        .weight-label { fill: #9ca3af; font-size: 14px; font-weight: bold; }
+
+        /* Messages */
+        .message {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: var(--msg);
+            color: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 20;
+            transform: translate(-50%, -50%);
+            transition: top 1s linear, left 1s linear;
+        }
+
+        .controls { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        button {
+            padding: 10px 20px; font-size: 16px; font-weight: bold; cursor: pointer;
+            border: none; border-radius: 6px; background: var(--accent); color: white;
+        }
+        button:hover { background: var(--accent-hover); }
+        button:disabled { background: #374151; cursor: not-allowed; color: #9ca3af; }
+
+        .log {
+            background: #000; color: #10b981; padding: 15px; height: 150px;
+            overflow-y: auto; font-family: monospace; border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Routage du Plus Court Chemin Distribué</h1>
+        
+        <div class="card">
+            <h2>1. Le Principe (Calcul par Phase)</h2>
+            <p>Le but est que chaque nœud connaisse sa distance minimale par rapport à une source (ici <strong>S</strong>). Au départ, tout le monde pense être à une distance infinie ($\infty$), sauf S qui est à 0.</p>
+            <p>Quand un nœud trouve un chemin plus court, il met à jour sa valeur et <strong>prévient ses voisins</strong>. Les voisins recalculent alors leur propre distance. L'algorithme se termine de lui-même quand plus aucun message n'est envoyé.</p>
+        </div>
+
+        <div class="card">
+            <h2>2. Simulateur Interactif</h2>
+            <p>Topologie : <strong>S</strong> veut diffuser sa route. Remarquez comment <strong>C</strong> va d'abord recevoir une mauvaise route via A, avant d'être corrigé par B dans une phase suivante !</p>
+            
+            <div class="controls">
+                <button id="btn-next" onclick="nextPhase()">Exécuter la Phase Suivante</button>
+                <button onclick="location.reload()" style="background:#4b5563">Reset</button>
+            </div>
+
+            <div class="network" id="net">
+                <svg>
+                    <!-- S -> A (Poids 2) -->
+                    <line x1="100" y1="175" x2="400" y2="80" />
+                    <text x="250" y="110" class="weight-label">w: 2</text>
+                    
+                    <!-- S -> B (Poids 5) -->
+                    <line x1="100" y1="175" x2="400" y2="270" />
+                    <text x="250" y="250" class="weight-label">w: 5</text>
+                    
+                    <!-- A -> B (Poids 1) -->
+                    <line x1="400" y1="80" x2="400" y2="270" />
+                    <text x="415" y="180" class="weight-label">w: 1</text>
+
+                    <!-- A -> C (Poids 4) -->
+                    <line x1="400" y1="80" x2="700" y2="175" />
+                    <text x="550" y="110" class="weight-label">w: 4</text>
+
+                    <!-- B -> C (Poids 1) -->
+                    <line x1="400" y1="270" x2="700" y2="175" />
+                    <text x="550" y="250" class="weight-label">w: 1</text>
+                </svg>
+
+                <div class="node" id="S" style="left:100px; top:175px;">S <div class="distance" id="dist-S">D=0</div></div>
+                <div class="node" id="A" style="left:400px; top:80px;">A <div class="distance" id="dist-A">D=∞</div></div>
+                <div class="node" id="B" style="left:400px; top:270px;">B <div class="distance" id="dist-B">D=∞</div></div>
+                <div class="node" id="C" style="left:700px; top:175px;">C <div class="distance" id="dist-C">D=∞</div></div>
+            </div>
+
+            <div class="log" id="logBox">> Initialisation : S=0. Tous les autres nœuds = ∞.<br>> En attente du lancement...<br></div>
+        </div>
+
+        <div class="card">
+            <h2>3. Pseudo-Code (Logique d'un nœud P_j)</h2>
+            <pre>
+<span class="comment">// Variables locales pour le nœud Pj</span>
+Entier D_j = ∞  <span class="comment">// Distance connue vers la source</span>
+
+<span class="comment">// Lors de la réception d'un message (D_i) venant du voisin P_i</span>
+<span class="keyword">Événement</span> RéceptionMessage(D_i, P_i) :
+    <span class="comment">// On calcule la nouvelle distance potentielle en passant par P_i</span>
+    Nouvelle_Dist = D_i + Poids_Lien(P_i, P_j)
+
+    <span class="comment">// Si on a trouvé un chemin STRICTEMENT plus court</span>
+    <span class="keyword">Si</span> (Nouvelle_Dist < D_j) <span class="keyword">Alors</span>
+        D_j = Nouvelle_Dist  <span class="comment">// Mise à jour (Relâchement)</span>
+        
+        <span class="comment">// On doit prévenir tous nos voisins de notre nouvelle distance !</span>
+        <span class="keyword">Pour chaque</span> voisin P_k de P_j :
+            Envoyer le message (D_j) à P_k
+    <span class="keyword">Fin Si</span>
+<span class="comment">// Si le message ne propose pas de chemin plus court, on l'ignore.</span></pre>
+        </div>
+    </div>
+
+    <script>
+        // Configuration du graphe
+        const coords = { S: {x: 100, y: 175}, A: {x: 400, y: 80}, B: {x: 400, y: 270}, C: {x: 700, y: 175} };
+        const edges = {
+            S: [{to: 'A', w: 2}, {to: 'B', w: 5}],
+            A: [{to: 'B', w: 1}, {to: 'C', w: 4}],
+            B: [{to: 'C', w: 1}],
+            C: [] // C est un cul-de-sac ici pour simplifier
+        };
+
+        let distances = { S: 0, A: Infinity, B: Infinity, C: Infinity };
+        let messageQueue = []; // Messages de la phase ACTUELLE
+        let nextQueue = [];    // Messages pour la phase SUIVANTE
+        let phase = 0;
+
+        const logBox = document.getElementById('logBox');
+        function log(msg, color="#10b981") {
+            logBox.innerHTML += `<span style="color:${color}">> ${msg}</span><br>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        // S envoie ses premiers messages à l'initialisation de l'algo
+        edges['S'].forEach(edge => nextQueue.push({from: 'S', to: edge.to, val: 0, w: edge.w}));
+
+        function nextPhase() {
+            if (nextQueue.length === 0) {
+                log("Réseau stabilisé. L'algorithme a convergé ! Aucun message à envoyer.", "#f59e0b");
+                document.getElementById('btn-next').disabled = true;
+                return;
+            }
+
+            phase++;
+            log(`\n--- PHASE ${phase} ---`, "#fff");
+            
+            messageQueue = [...nextQueue];
+            nextQueue = []; // On vide pour préparer les réactions
+
+            document.querySelectorAll('.node').forEach(n => n.classList.remove('updated'));
+
+            messageQueue.forEach(msg => {
+                // Animation visuelle du message
+                const dot = document.createElement('div');
+                dot.className = 'message';
+                dot.innerText = msg.val;
+                dot.style.left = coords[msg.from].x + 'px';
+                dot.style.top = coords[msg.from].y + 'px';
+                document.getElementById('net').appendChild(dot);
+
+                // Reflow
+                void dot.offsetWidth;
+
+                // Mouvement
+                dot.style.left = coords[msg.to].x + 'px';
+                dot.style.top = coords[msg.to].y + 'px';
+
+                // Logique asynchrone à la réception
+                setTimeout(() => {
+                    dot.remove();
+                    processMessage(msg.to, msg.from, msg.val, msg.w);
+                }, 1000);
+            });
+
+            document.getElementById('btn-next').disabled = true;
+            setTimeout(() => { document.getElementById('btn-next').disabled = false; }, 1100);
+        }
+
+        function processMessage(target, sender, senderDist, weight) {
+            let potentialDist = senderDist + weight;
+            let currentDist = distances[target];
+
+            if (potentialDist < currentDist) {
+                log(`${target} reçoit (${senderDist}) de ${sender}. Calcul: ${senderDist}+${weight}=${potentialDist}. Mise à jour ! (${currentDist} -> ${potentialDist})`);
+                distances[target] = potentialDist;
+                
+                // Maj Visuelle
+                let nodeEl = document.getElementById(target);
+                nodeEl.classList.add('updated');
+                document.getElementById(`dist-${target}`).innerText = `D=${potentialDist}`;
+
+                // Générer les messages pour la phase suivante
+                edges[target].forEach(edge => {
+                    nextQueue.push({from: target, to: edge.to, val: potentialDist, w: edge.w});
+                    log(`  ↳ ${target} prépare l'envoi de (${potentialDist}) vers ${edge.to}.`, "#9ca3af");
+                });
+            } else {
+                log(`${target} reçoit (${senderDist}) de ${sender}. Calcul: ${senderDist}+${weight}=${potentialDist}. Ignoré (actuel: ${currentDist}).`, "#ef4444");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastry Dynamique : Table Complète & Nœuds Custom</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --accent: #14b8a6; /* Teal */
+            --accent-hover: #0d9488;
+            --node-bg: #334155;
+            --prefix: #22c55e;
+            --msg: #facc15;
+            --cell-bg: #0f172a;
+            --cell-border: #334155;
+        }
+
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-dark); color: var(--text-main); line-height: 1.6; margin: 0; padding: 0; }
+        header { background-color: var(--bg-card); padding: 30px 20px; text-align: center; border-bottom: 2px solid var(--accent); }
+        h1 { margin: 0; color: var(--accent); font-size: 2em; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .card { background-color: var(--bg-card); border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+
+        /* Interface Principale (2 colonnes) */
+        .layout { display: flex; gap: 20px; flex-wrap: wrap; }
+        .col-network { flex: 1; min-width: 400px; }
+        .col-table { flex: 1; min-width: 500px; }
+
+        /* Contrôles */
+        .controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
+        input { padding: 10px; border-radius: 5px; border: 1px solid #475569; background: #0f172a; color: white; width: 100px; font-family: monospace; font-size: 16px; }
+        button { padding: 10px 15px; font-size: 14px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; background-color: var(--accent); color: white; }
+        button:hover { background-color: var(--accent-hover); }
+        button.btn-alt { background-color: #64748b; }
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 10px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Pseudo-code */
+        pre {
+            background-color: #020617;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            color: #cbd5e1;
+            font-family: 'Courier New', Courier, monospace;
+            border-left: 4px solid var(--accent);
+            font-size: 15px;
+        }
+        .comment { color: #64748b; font-style: italic; }
+        .keyword { color: #c084fc; font-weight: bold; }
+        /* Réseau */
+        .network-area { position: relative; height: 400px; background: #020617; border-radius: 8px; border: 1px solid #334155; overflow: hidden; }
+        
+        .node {
+            position: absolute; width: 50px; height: 50px; background-color: var(--node-bg); border: 2px solid #94a3b8; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-family: monospace; font-size: 12px; cursor: pointer; transition: all 0.3s; transform: translate(-50%, -50%); z-index: 10;
+        }
+        .node:hover { border-color: white; transform: translate(-50%, -50%) scale(1.1); }
+        .node.selected { border-color: var(--accent); background-color: #134e4a; box-shadow: 0 0 15px var(--accent); }
+        .node.source { border-color: #3b82f6; box-shadow: 0 0 15px #3b82f6; }
+        .node.dest { border-color: #ef4444; box-shadow: 0 0 15px #ef4444; }
+        .node.routing { border-color: var(--msg); }
+
+        .packet { position: absolute; width: 15px; height: 15px; background: var(--msg); border-radius: 50%; z-index: 20; transition: top 0.8s ease, left 0.8s ease; display: none; box-shadow: 0 0 10px var(--msg); }
+
+        /* Table de routage complète */
+        .routing-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: monospace; font-size: 14px; }
+        .routing-table th, .routing-table td { padding: 10px; border: 1px solid var(--cell-border); text-align: center; }
+        .routing-table th { background: #1e293b; color: var(--accent); }
+        .routing-table td { background: var(--cell-bg); }
+        .empty-cell { color: #475569; font-style: italic; }
+        .match { color: var(--prefix); font-weight: bold; }
+        .self-cell { background: #1e293b; color: #94a3b8; }
+        
+        /* Log */
+        .log-box { background: #000; color: #a3e635; font-family: monospace; font-size: 13px; padding: 15px; height: 200px; overflow-y: auto; border-radius: 8px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Simulateur Pastry : Réseau Dynamique</h1>
+        <p>Routage par préfixe (Base 4, ID sur 4 chiffres)</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>1. Le Concept : L'entonnoir des identifiants</h2>
+            <p>Imaginons un réseau où les nœuds ont des identifiants de 4 chiffres (en base 4 : 0, 1, 2, 3).<br>
+            Le but est d'envoyer un message vers la destination <strong class="p-target">3120</strong>.</p>
+            <p>La règle d'or : <strong>À chaque saut, le message doit être envoyé à un nœud qui partage un préfixe commun plus long avec la destination.</strong></p>
+            <ul>
+                <li>Le nœud <span style="font-family:monospace">1023</span> (préfixe commun : 0 chiffre) cherchera dans sa table un nœud commençant par <span class="p-match">3...</span></li>
+                <li>Le nœud <span style="font-family:monospace">3211</span> (préfixe commun : 1 chiffre) cherchera un nœud commençant par <span class="p-match">31..</span></li>
+                <li>Et ainsi de suite jusqu'à arriver à destination !</li>
+            </ul>
+        </div>
+        <div class="layout">
+            <!-- COLONNE GAUCHE : Réseau et Contrôles -->
+            <div class="col-network">
+                <div class="card">
+                    <h2>1. Gestion du Réseau</h2>
+                    <div class="controls">
+                        <input type="text" id="new-node-id" placeholder="Ex: 2103" maxlength="4">
+                        <button onclick="addNode()">Ajouter Nœud</button>
+                        <button class="btn-alt" onclick="generateRandomNodes()">+5 Aléatoires</button>
+                    </div>
+                    
+                    <div class="controls" style="margin-top: 20px; border-top: 1px solid #334155; padding-top: 15px;">
+                        <span style="font-size: 14px; font-weight:bold;">Routage :</span>
+                        <button onclick="setMode('src')" id="btn-src" class="btn-alt">Définir Source</button>
+                        <button onclick="setMode('dst')" id="btn-dst" class="btn-alt">Définir Dest.</button>
+                        <button onclick="startRouting()" id="btn-route" style="background:#ef4444;" disabled>Lancer !</button>
+                    </div>
+
+                    <div class="network-area" id="network">
+                        <div class="packet" id="packet"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLONNE DROITE : Table Complète et Log -->
+            <div class="col-table">
+                <div class="card">
+                    <h2>2. Table de Routage de <span id="view-node-id" style="color:var(--accent);">Aucun</span></h2>
+                    <p style="font-size: 13px; color: #94a3b8;">Cliquez sur un nœud de la carte pour calculer et afficher sa table complète. La table possède 4 lignes (longueur du préfixe partagé) et 4 colonnes (chiffre suivant en base 4).</p>
+                    
+                    <table class="routing-table" id="full-table">
+                        <!-- Généré dynamiquement -->
+                        <tr><td>Sélectionnez un nœud pour voir sa table.</td></tr>
+                    </table>
+                </div>
+
+                <div class="log-box" id="logBox">
+                    > Initialisation. Ajoutez des nœuds ou lancez un routage.<br>
+                </div>
+            </div>
+        </div>
+    <div class="card">
+            <h2>3. L'Algorithme (Pseudo-code d'un nœud Pastry)</h2>
+            <pre>
+<span class="comment">// Exécuté par le nœud courant 'Mon_ID' pour router vers 'Dest_ID'</span>
+<span class="keyword">Fonction</span> RouterParPrefixe(Message, Dest_ID) :
+    
+    <span class="keyword">Si</span> (Mon_ID == Dest_ID) <span class="keyword">Alors</span>
+        Accepter(Message) <span class="comment">// Le message est arrivé à bon port !</span>
+        <span class="keyword">Retourner</span>
+
+    <span class="comment">// 1. Trouver combien de chiffres Mon_ID et Dest_ID ont en commun au début</span>
+    L = LongueurPrefixeCommun(Mon_ID, Dest_ID)
+    
+    <span class="comment">// 2. Regarder quel est le chiffre SUIVANT dans l'ID de destination</span>
+    Chiffre_Suivant = Dest_ID[L]
+    
+    <span class="comment">// 3. Chercher dans la table de routage</span>
+    <span class="comment">// La table a des lignes (pour chaque longueur de préfixe L)</span>
+    <span class="comment">// et des colonnes (pour chaque chiffre possible de 0 à 3)</span>
+    Prochain_Noeud = TableRoutage[Ligne: L][Colonne: Chiffre_Suivant]
+    
+    <span class="keyword">Si</span> (Prochain_Noeud existe) <span class="keyword">Alors</span>
+        Envoyer(Message, Prochain_Noeud)
+    <span class="keyword">Sinon</span>
+        <span class="comment">// (Cas d'erreur géré par d'autres mécanismes dans Pastry)</span>
+        Renvoyer_Erreur()</pre>
+        </div>
+
+    </div>
+
+    <script>
+        let nodes = []; // Liste des objets {id, x, y}
+        let selectedNode = null;
+        let routeSource = null;
+        let routeDest = null;
+        let interactionMode = 'inspect'; // 'inspect', 'src', 'dst'
+        const networkDiv = document.getElementById('network');
+        const packet = document.getElementById('packet');
+        const logBox = document.getElementById('logBox');
+
+        function log(msg, color="#a3e635") {
+            logBox.innerHTML += `<span style="color:${color}">> ${msg}</span><br>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        // --- GESTION DES NŒUDS ---
+
+        function addNode(idStr = null) {
+            let val = idStr || document.getElementById('new-node-id').value;
+            if (!/^[0-3]{4}$/.test(val)) {
+                alert("L'ID doit faire exactement 4 chiffres, composés de 0, 1, 2 ou 3 (Base 4).");
+                return;
+            }
+            if (nodes.find(n => n.id === val)) {
+                log(`Nœud ${val} déjà présent.`, "#ef4444");
+                return;
+            }
+
+            // Position aléatoire sur le cercle (pour faire joli)
+            let angle = Math.random() * Math.PI * 2;
+            let radius = 130 + Math.random() * 40;
+            let cx = 200, cy = 200; // Centre
+            let x = cx + radius * Math.cos(angle);
+            let y = cy + radius * Math.sin(angle);
+
+            let nodeObj = { id: val, x, y };
+            nodes.push(nodeObj);
+            
+            // Créer l'élément visuel
+            let el = document.createElement('div');
+            el.className = 'node';
+            el.id = `node-${val}`;
+            el.innerText = val;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.onclick = () => handleNodeClick(val);
+            networkDiv.appendChild(el);
+
+            log(`Nœud ${val} rejoint le réseau. Ses voisins mettent à jour leurs tables silencieusement.`);
+            if(!idStr) document.getElementById('new-node-id').value = "";
+            
+            // Mettre à jour la table affichée si nécessaire
+            if(selectedNode) displayRoutingTable(selectedNode);
+        }
+
+        function generateRandomNodes() {
+            for(let i=0; i<5; i++) {
+                let r = "";
+                for(let j=0; j<4; j++) r += Math.floor(Math.random() * 4).toString();
+                if(!nodes.find(n => n.id === r)) addNode(r);
+            }
+        }
+
+        // --- CALCUL DE LA TABLE PAST RY ---
+
+        function getCommonPrefixLen(a, b) {
+            let i = 0;
+            while(i < 4 && a[i] === b[i]) i++;
+            return i;
+        }
+
+        // Calcule la table complète d'un nœud donné
+        function computeRoutingTable(nodeId) {
+            // Table: 4 lignes (longueur préfixe 0 à 3), 4 colonnes (chiffre 0 à 3)
+            let table = [
+                [null, null, null, null],
+                [null, null, null, null],
+                [null, null, null, null],
+                [null, null, null, null]
+            ];
+
+            // Pour chaque nœud du réseau (sauf nous-même)
+            nodes.forEach(n => {
+                if(n.id === nodeId) return;
+                
+                let l = getCommonPrefixLen(nodeId, n.id);
+                if (l < 4) {
+                    let nextDigit = parseInt(n.id[l]);
+                    
+                    // Règle simplifiée : on prend le premier qu'on trouve qui matche
+                    // Dans un vrai Pastry, on prend celui avec la latence réseau la plus faible
+                    if (!table[l][nextDigit]) {
+                        table[l][nextDigit] = n.id;
+                    }
+                }
+            });
+            return table;
+        }
+
+        // --- INTERFACE DE LA TABLE ---
+
+        function handleNodeClick(id) {
+            if (interactionMode === 'src') {
+                routeSource = id;
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('source'));
+                document.getElementById(`node-${id}`).classList.add('source');
+                log(`Source définie sur ${id}`, "#3b82f6");
+                checkRouteReady();
+                setMode('inspect');
+            } else if (interactionMode === 'dst') {
+                routeDest = id;
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('dest'));
+                document.getElementById(`node-${id}`).classList.add('dest');
+                log(`Destination définie sur ${id}`, "#ef4444");
+                checkRouteReady();
+                setMode('inspect');
+            } else {
+                // Inspect mode
+                selectedNode = id;
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+                document.getElementById(`node-${id}`).classList.add('selected');
+                displayRoutingTable(id);
+            }
+        }
+
+        function displayRoutingTable(id) {
+            document.getElementById('view-node-id').innerText = id;
+            let table = computeRoutingTable(id);
+            let html = `<tr><th>Ligne (Préfixe)</th><th>0</th><th>1</th><th>2</th><th>3</th></tr>`;
+
+            for(let l = 0; l < 4; l++) {
+                let prefixStr = id.substring(0, l);
+                html += `<tr><th>L=${l} (<span class="match">${prefixStr}</span>...)</th>`;
+                
+                for(let d = 0; d < 4; d++) {
+                    let cellVal = table[l][d];
+                    
+                    // Si la case correspond au propre chiffre du nœud courant
+                    if (parseInt(id[l]) === d) {
+                        html += `<td class="self-cell">(Nous-même)</td>`;
+                    } else if (cellVal) {
+                        let fPrefix = cellVal.substring(0, l);
+                        let fRest = cellVal.substring(l);
+                        html += `<td><span class="match">${fPrefix}</span>${fRest}</td>`;
+                    } else {
+                        html += `<td class="empty-cell">Vide</td>`;
+                    }
+                }
+                html += `</tr>`;
+            }
+            document.getElementById('full-table').innerHTML = html;
+        }
+
+        // --- LOGIQUE DE ROUTAGE INTERACTIVE ---
+
+        function setMode(m) {
+            interactionMode = m;
+            document.getElementById('btn-src').style.background = m === 'src' ? '#3b82f6' : '#64748b';
+            document.getElementById('btn-dst').style.background = m === 'dst' ? '#ef4444' : '#64748b';
+        }
+
+        function checkRouteReady() {
+            if (routeSource && routeDest && routeSource !== routeDest) {
+                document.getElementById('btn-route').disabled = false;
+            }
+        }
+
+        function startRouting() {
+            if(!routeSource || !routeDest) return;
+            document.getElementById('btn-route').disabled = true;
+            log(`\n--- DÉMARRAGE DU ROUTAGE ---`, "#fff");
+            log(`De ${routeSource} vers ${routeDest}`);
+
+            let current = routeSource;
+            
+            // Placer le paquet
+            let startObj = nodes.find(n => n.id === current);
+            packet.style.display = 'block';
+            packet.style.left = startObj.x + 'px';
+            packet.style.top = startObj.y + 'px';
+
+            function nextHop() {
+                if (current === routeDest) {
+                    log(`🎉 PAQUET DÉLIVRÉ À ${routeDest} !`, "#22c55e");
+                    packet.style.display = 'none';
+                    document.getElementById('btn-route').disabled = false;
+                    return;
+                }
+
+                // Afficher la table du nœud courant pour la pédagogie
+                displayRoutingTable(current);
+
+                let l = getCommonPrefixLen(current, routeDest);
+                let nextDigit = parseInt(routeDest[l]);
+                let table = computeRoutingTable(current);
+                
+                let nextNodeId = table[l][nextDigit];
+
+                if (nextNodeId) {
+                    log(`Le nœud ${current} partage ${l} chiffres avec la cible. Il cherche la ligne ${l}, colonne ${nextDigit}... Trouvé : ${nextNodeId}`);
+                    
+                    let nextObj = nodes.find(n => n.id === nextNodeId);
+                    
+                    // Animation
+                    packet.style.left = nextObj.x + 'px';
+                    packet.style.top = nextObj.y + 'px';
+                    
+                    current = nextNodeId;
+                    setTimeout(nextHop, 1200);
+
+                } else {
+                    log(`💥 ÉCHEC : Le nœud ${current} a une case vide à la ligne ${l}, colonne ${nextDigit}. Le réseau manque de nœuds pour acheminer ce message. Ajoutez plus de nœuds !`, "#ef4444");
+                    packet.style.display = 'none';
+                    document.getElementById('btn-route').disabled = false;
+                }
+            }
+
+            setTimeout(nextHop, 500);
+        }
+
+        // Setup initial
+        addNode("0123"); addNode("1023"); addNode("3211"); addNode("3102"); addNode("3123"); addNode("3120");
+    </script>
+</body>
+</html>

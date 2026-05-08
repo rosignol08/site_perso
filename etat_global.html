@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chandy-Lamport : État Global | Cours Interactif</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --accent: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --marker: #facc15;
+            --msg: #38bdf8;
+            --saved: #22c55e;
+            --recording: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: var(--bg-card);
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        h1 { margin: 0; color: var(--accent); font-size: 2.2em; }
+        h2 { color: var(--accent); border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top: 40px; }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 10px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Styles du Pseudo-code */
+        pre {
+            background-color: #020617;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            color: #e2e8f0;
+            font-family: 'Courier New', Courier, monospace;
+            border-left: 4px solid var(--accent);
+            font-size: 15px;
+        }
+        .comment { color: #64748b; font-style: italic; }
+        .keyword { color: #f472b6; font-weight: bold; }
+        .func { color: #38bdf8; }
+
+        /* Simulateur Interactif */
+        .simulator {
+            position: relative;
+            width: 100%;
+            height: 450px;
+            background-color: #020617;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+            border: 1px solid #334155;
+        }
+
+        .node {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-color: #334155;
+            border: 3px solid #64748b;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+
+        .node.saved {
+            background-color: rgba(34, 197, 94, 0.2);
+            border-color: var(--saved);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .node-label { font-size: 0.6em; font-weight: normal; margin-top: 5px; color: #cbd5e1;}
+
+        /* Lignes SVG */
+        svg { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 1; }
+        line { stroke: #334155; stroke-width: 2; stroke-dasharray: 4; }
+
+        /* Messages */
+        .packet {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            z-index: 20;
+            transform: translate(-50%, -50%);
+            transition: top 3s linear, left 3s linear;
+        }
+
+        .msg-app { background-color: var(--msg); box-shadow: 0 0 10px var(--msg); }
+        .msg-marker { background-color: var(--marker); box-shadow: 0 0 15px var(--marker); width: 22px; height: 22px; border: 2px solid #fff; }
+
+        .controls { display: flex; gap: 15px; margin-bottom: 20px; justify-content: center; }
+        button {
+            padding: 12px 24px; font-size: 1em; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.8; }
+        .btn-play { background-color: var(--accent); color: white; }
+        .btn-reset { background-color: #475569; color: white; }
+        button:disabled { background-color: #334155; cursor: not-allowed; color: #94a3b8; }
+
+        .log-panel {
+            background: #000; color: #a3e635; padding: 15px; height: 180px; overflow-y: auto; border-radius: 8px; font-family: monospace; font-size: 14px;
+        }
+        .hl-marker { color: var(--marker); }
+        .hl-saved { color: var(--saved); }
+        .hl-app { color: var(--msg); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Algorithme de Chandy-Lamport</h1>
+        <p>Capture d'un État Global (Snapshot) sans horloge commune</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- SECTION 1 : THÉORIE -->
+        <div class="card">
+            <h2>1. Le Problème : La photo de groupe impossible</h2>
+            <p>Imaginez que vous vouliez prendre une photo panoramique d'un groupe d'amis dans un parc, mais qu'ils courent partout en se lançant des balles (les messages). Vous n'avez pas de signal global pour leur dire "Figez-vous tous en même temps !".</p>
+            <p><strong>La solution de Chandy et Lamport :</strong> On utilise un signal qui se propage dans le réseau (le <strong>Marqueur</strong>). Quand quelqu'un reçoit le marqueur, il prend une photo de lui-même (son <em>état local</em>), puis il fait suivre le marqueur à ses amis. De plus, il doit noter toutes les balles qu'il reçoit <em>après</em> sa propre photo mais qui avaient été lancées <em>avant</em> que le lanceur ne prenne la sienne (c'est l'<em>état du canal</em>).</p>
+        </div>
+
+        <!-- SECTION 2 : SIMULATEUR -->
+        <div class="card">
+            <h2>2. Simulateur Interactif</h2>
+            <p>Observez le trafic normal (messages bleus). Cliquez sur le bouton pour qu'un nœud initie la capture de l'état global. Suivez attentivement les <strong>Marqueurs jaunes</strong> et le journal de bord.</p>
+            
+            <div class="controls">
+                <button class="btn-play" id="btn-start" onclick="initSnapshot('P1')">Initier le Snapshot (depuis P1)</button>
+                <button class="btn-reset" onclick="location.reload()">Réinitialiser</button>
+            </div>
+
+            <div class="simulator" id="sim">
+                <svg>
+                    <!-- Connexions -->
+                    <line x1="200" y1="150" x2="500" y2="80" />  <!-- P1 <-> P2 -->
+                    <line x1="500" y1="80" x2="800" y2="150" />  <!-- P2 <-> P3 -->
+                    <line x1="800" y1="150" x2="500" y2="350" /> <!-- P3 <-> P4 -->
+                    <line x1="500" y1="350" x2="200" y2="150" /> <!-- P4 <-> P1 -->
+                    <line x1="500" y1="80" x2="500" y2="350" />  <!-- P2 <-> P4 (Diagonale) -->
+                </svg>
+
+                <div class="node" id="P1" style="left: 200px; top: 150px;">P1<div class="node-label" id="lbl-P1">En cours...</div></div>
+                <div class="node" id="P2" style="left: 500px; top: 80px;">P2<div class="node-label" id="lbl-P2">En cours...</div></div>
+                <div class="node" id="P3" style="left: 800px; top: 150px;">P3<div class="node-label" id="lbl-P3">En cours...</div></div>
+                <div class="node" id="P4" style="left: 500px; top: 350px;">P4<div class="node-label" id="lbl-P4">En cours...</div></div>
+            </div>
+
+            <div class="log-panel" id="logBox">
+                > Trafic réseau standard en cours...<br>
+            </div>
+        </div>
+
+        <!-- SECTION 3 : PSEUDO-CODE -->
+        <div class="card">
+            <h2>3. Explication du Pseudo-code</h2>
+            <pre>
+<span class="comment">// --- RÈGLE DE L'INITIATEUR (Celui qui décide de lancer la photo) ---</span>
+<span class="keyword">Fonction</span> <span class="func">InitierSnapshot</span>(P_i) :
+    Sauvegarder l'état local de P_i
+    <span class="keyword">Pour chaque</span> canal sortant C vers P_j :
+        Envoyer un message <span class="hl-marker">Marqueur</span> sur C
+    <span class="keyword">Pour chaque</span> canal entrant C' :
+        Commencer à enregistrer les messages qui arrivent sur C'
+
+<span class="comment">// --- RÈGLE DE RÉCEPTION (Quand un processus reçoit un Marqueur) ---</span>
+<span class="keyword">Événement</span> <span class="func">ReceptionMarqueur</span>(P_i reçoit Marqueur depuis P_k via le canal C) :
+    
+    <span class="keyword">Si</span> (P_i n'a PAS encore sauvegardé son état local) <span class="keyword">Alors</span>
+        <span class="comment">// C'est le PREMIER marqueur que P_i voit !</span>
+        Sauvegarder l'état local de P_i
+        Déclarer que l'état du canal C (P_k -> P_i) est VIDE.
+        
+        <span class="keyword">Pour chaque</span> canal sortant vers P_j :
+            Envoyer un message <span class="hl-marker">Marqueur</span> à P_j
+            
+        <span class="keyword">Pour chaque</span> AUTRE canal entrant C' (différent de C) :
+            Commencer à enregistrer les messages qui arrivent sur C'
+            
+    <span class="keyword">Sinon</span>
+        <span class="comment">// P_i a DÉJÀ sauvegardé son état (c'est son 2e, 3e... marqueur)</span>
+        Arrêter d'enregistrer le canal C.
+        L'état du canal C = Tous les messages enregistrés depuis la sauvegarde.
+    <span class="keyword">Fin Si</span></pre>
+        </div>
+
+    </div>
+
+    <script>
+        // Définition du graphe (Topologie)
+        const coords = { P1: {x:200, y:150}, P2: {x:500, y:80}, P3: {x:800, y:150}, P4: {x:500, y:350} };
+        // Canaux unidirectionnels pour la logique, bidirectionnels pour l'affichage
+        const edges = {
+            P1: ['P2', 'P4'],
+            P2: ['P1', 'P3', 'P4'],
+            P3: ['P2', 'P4'],
+            P4: ['P1', 'P2', 'P3']
+        };
+
+        const logBox = document.getElementById('logBox');
+        let msgIdCounter = 0;
+        let snapshotActive = false;
+        let trafficInterval;
+
+        // État de l'algorithme
+        let state = {
+            P1: { saved: false, recording: {}, channelData: {} },
+            P2: { saved: false, recording: {}, channelData: {} },
+            P3: { saved: false, recording: {}, channelData: {} },
+            P4: { saved: false, recording: {}, channelData: {} }
+        };
+
+        function log(text) {
+            logBox.innerHTML += `> ${text}<br>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function spawnMessage(from, to, type) {
+            const msg = document.createElement('div');
+            msg.className = `packet ${type === 'app' ? 'msg-app' : 'msg-marker'}`;
+            msg.style.left = coords[from].x + 'px';
+            msg.style.top = coords[from].y + 'px';
+            document.getElementById('sim').appendChild(msg);
+
+            let msgId = type === 'app' ? ++msgIdCounter : 'Marqueur';
+
+            // Animation
+            setTimeout(() => {
+                msg.style.left = coords[to].x + 'px';
+                msg.style.top = coords[to].y + 'px';
+            }, 50);
+
+            // Réception
+            setTimeout(() => {
+                msg.remove();
+                handleReceive(to, from, type, msgId);
+            }, 3000);
+        }
+
+        function handleReceive(receiver, sender, type, msgId) {
+            let node = state[receiver];
+
+            if (type === 'app') {
+                // Si on est en train d'enregistrer ce canal, on capture le message
+                if (node.recording[sender]) {
+                    if (!node.channelData[sender]) node.channelData[sender] = [];
+                    node.channelData[sender].push(msgId);
+                    log(`<span class="hl-app">${receiver} capture le Msg #${msgId} en transit sur le canal ${sender}->${receiver} !</span>`);
+                }
+            } 
+            else if (type === 'marker') {
+                if (!node.saved) {
+                    // --- 1ER MARQUEUR REÇU ---
+                    log(`<span class="hl-marker">${receiver} reçoit son PREMIER marqueur (de ${sender}).</span>`);
+                    
+                    // Sauvegarde
+                    node.saved = true;
+                    document.getElementById(receiver).classList.add('saved');
+                    document.getElementById(`lbl-${receiver}`).innerText = "SAUVEGARDÉ";
+                    log(`<span class="hl-saved">${receiver} SAUVEGARDE SON ÉTAT LOCAL.</span>`);
+                    
+                    // On déclare le canal d'arrivée comme vide
+                    node.recording[sender] = false;
+                    
+                    // On commence à écouter les autres canaux
+                    Object.keys(edges).forEach(other => {
+                        if (edges[other].includes(receiver) && other !== sender) {
+                            node.recording[other] = true;
+                        }
+                    });
+
+                    // Diffusion des marqueurs
+                    edges[receiver].forEach(target => {
+                        log(`  ↳ ${receiver} diffuse un marqueur vers ${target}.`);
+                        spawnMessage(receiver, target, 'marker');
+                    });
+
+                } else {
+                    // --- MARQUEUR SUIVANT ---
+                    log(`<span class="hl-marker">${receiver} reçoit un marqueur de ${sender}. Fin d'enregistrement du canal.</span>`);
+                    node.recording[sender] = false;
+                    
+                    let captured = node.channelData[sender] ? node.channelData[sender].length : 0;
+                    log(`  ↳ État final du canal ${sender}->${receiver} : [ ${captured} message(s) capturé(s) ]`);
+                }
+            }
+        }
+
+        function initSnapshot(initiator) {
+            if (snapshotActive) return;
+            snapshotActive = true;
+            document.getElementById('btn-start').disabled = true;
+
+            log(`\n<span class="hl-saved">--- INITIATION DE LA CAPTURE PAR ${initiator} ---</span>`);
+            
+            let node = state[initiator];
+            node.saved = true;
+            document.getElementById(initiator).classList.add('saved');
+            document.getElementById(`lbl-${initiator}`).innerText = "SAUVEGARDÉ";
+
+            // On écoute TOUS les canaux entrants
+            Object.keys(edges).forEach(other => {
+                if (edges[other].includes(initiator)) {
+                    node.recording[other] = true;
+                }
+            });
+
+            // Envoi des marqueurs partout
+            edges[initiator].forEach(target => {
+                log(`  ↳ ${initiator} diffuse un marqueur vers ${target}.`);
+                spawnMessage(initiator, target, 'marker');
+            });
+        }
+
+        // Générateur de trafic de fond
+        function randomTraffic() {
+            let nodesArray = Object.keys(edges);
+            let from = nodesArray[Math.floor(Math.random() * nodesArray.length)];
+            let targets = edges[from];
+            let to = targets[Math.floor(Math.random() * targets.length)];
+            
+            spawnMessage(from, to, 'app');
+        }
+
+        // Lancer le trafic
+        trafficInterval = setInterval(randomTraffic, 1000);
+        
+        // Initialiser avec quelques messages pour remplir l'écran
+        setTimeout(randomTraffic, 200);
+        setTimeout(randomTraffic, 500);
+    </script>
+</body>
+</html>
