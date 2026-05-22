@@ -125,7 +125,7 @@ async function sendMessage() {
         statusMessage.textContent = 'Réflexion...';
 
         // 3. Appel à l'API
-        const response = await fetch(`${API_URL}/chat/?session_id=${SESSION_ID}`, {
+        const response = await fetch(`${API_URL}/chat/`, { //?session_id=${SESSION_ID}
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
