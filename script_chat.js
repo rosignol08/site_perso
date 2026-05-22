@@ -1,4 +1,5 @@
-const API_URL = "https://robot.romaric.site"; // L'URL du serveur
+const API_URL = "https://robot.romaric.nl"; // L'URL du serveur
+const MODEL3 = "gemma3:12b";
 const MODEL2 = "gemma3:4b";
 const MODEL = "gemma3:1b";
 const messagesBox = document.getElementById('messages-box');
@@ -10,7 +11,13 @@ const modelToggle = document.getElementById('model-toggle');
 let currentModel = MODEL;
 
 function toggleModel() {
-    currentModel = currentModel === MODEL ? MODEL2 : MODEL;
+    if (currentModel === MODEL) {
+        currentModel = MODEL2;
+    } else if (currentModel === MODEL2) {
+        currentModel = MODEL3;
+    } else {
+        currentModel = MODEL;
+    }
     updateModelButton();
     displayMessage(`Modèle changé vers: ${currentModel}`, 'system');
 }
@@ -21,7 +28,8 @@ function toggleModel() {
 function updateModelButton() {
     if (modelToggle) {
         modelToggle.textContent = `Modèle: ${currentModel}`;
-        modelToggle.title = `Cliquez pour changer (${currentModel === MODEL ? MODEL2 : MODEL})`;
+        const nextModel = currentModel === MODEL ? MODEL2 : currentModel === MODEL2 ? MODEL3 : MODEL;
+        modelToggle.title = `Cliquez pour changer (${nextModel})`;
     }
 }
 
@@ -110,7 +118,7 @@ async function sendMessage() {
         prompt: finalPrompt,
         model: currentModel,
         max_tokens: 3000,
-        temperature: 0.7
+        temperature: 0.5
     };
 
     try {
