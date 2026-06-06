@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1.0">
+<title>Tubes & IPC - Master PSCR</title>
+<style>
+    :root {
+        --bg-color: #0d1117;
+        --card_bg: #161b22;
+        --accent-color: #58a6ff;
+        --hacker-green: #39ff14;
+        --border-color: #30363d;
+    }
+
+    body { background-color: var(--bg-color); color: var(--text-color); font-family: sans-serif; margin: 0; padding: 0; line-height: 1.6; }
+    nav { background: #161b22; padding: 1rem 2rem; border-bottom: 1px solid var(--border-color); }
+    nav a { color: var(--hacker-green); text-decoration: none; margin-right: 20px; font-weight: bold; }
+    .container { max-width: 1000px; margin: auto; padding: 2rem; }
+    h1, h2, h3 { color: var(--hacker-green); }
+    pre { background: #000; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; border-left: 4px solid var(--hacker-green); }
+    code { font-family: 'Courier New', Courier, monospace; color: #e6edf3; }
+    .info-box { background: rgba(58,166,255,0.1); border: 1px solid var(--accent-color); padding: 1rem; margin: 1rem 0; border-radius: 8px; }
+    .exercise { background: #1c2118; border: 1px dashed var(--hacker-green); padding: 2rem; margin: 2rem 0; border-radius: 10px; }
+
+    /* Animation Pipe */
+    .pipe-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 40px;
+        background: #161b22;
+        border-radius: 15px;
+        margin: 2rem 0;
+    }
+    .pipe-box { width: 80px; height: 80px; border: 3px solid var(--hacker-green); display: flex; align-items: center; justify-content: center; }
+    .pipe-line { height: 10px; background: #30363d; width: 150px; position: relative; }
+    .data-flow {
+        position: absolute;
+        width: 20px;
+        height: 100%;
+        background: var(--hacker-green);
+        animation: flow 2s infinite linear;
+    }
+    @keyframes flow {
+        from { left: 0; }
+        to { left: 100%; }
+    }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="rev.html">← Dashboard</a>
+    </nav>
+    <div class="container">
+        <h1>Module 4 : Tubes & IPC</h1>
+        <p>Communication entre processus via les files de données (Pipes).</p>
+
+        <h2>1. Les Tubes Anonymes (pipe)</h2>
+        <p>Un tube est un canal de communication unidirectionnel. Il possède une capacité limitée et fonctionne sur le principe FIFO.</p>
+        <ul>
+            <li><strong>Caractéristiques :</strong> Pas de nom dans le système de fichiers, utilisé par des processus liés (parent/fils).</li>
+            <li><strong>Comportement :</strong> Lecture bloquante si vide, écriture bloquante si plein.</li>
+        </ul>
+
+        <h2>2. Les Tubes Nommés (mkfifo)</h2>
+        <p>Contrairement aux tubes anonymes, les tubes nommés apparaissent dans le système de fichiers.</p>
+        <ul>
+            <li><strong>Accès :</strong> Utilisables par n'importe quel processus possédant les droits d'accès.</li>
+            <li><strong>Utilisation :</strong> Création avec <code>mkfifo()</code>, ouverture avec <code>open()</code>.</li>
+        </ul>
+
+        <div class="info-box">
+            <strong>Note Technique :</strong> L'option <code>O_NONBLOCK</code> permet de rendre les lectures et écritures non bloquantes, utile pour des systèmes réactifs.
+        </div>
+
+        <h2>3. Exemple d'implémentation</h2>
+        <pre>
+#include &lt;fcntl.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;unistd.h&gt;
+
+int main() {
+    int pipefd[2]; // 0 pour lecture, 1 pour écriture
+    pipe(pipefd);
+    
+    // Processus fils
+    if (fork() == 0) {
+        close(pipefd[1]); // Ferme l'écriture
+        char buffer[100];
+        read(pipefd[0], buffer, 100);
+        printf("Reçu : %s\n", buffer);
+    } else {
+        close(pipefd[0]); // Ferme la lecture
+        write(pipefd[1], "Bonjour du tube !", 16);
+    }
+    return 0;
+}</pre>
+
+<div class="exercise">
+    <h3>Entraînement : Création d'un Tube Nommé</h3>
+    <p>Créez un script ou un programme qui crée un fichier nommé <code>/tmp/mon_tube</code> et permet à deux processus différents de s'échanger un message.</p>
+    <pre>
+// Utiliser mkfifo() pour créer le tube.
+// Utiliser open(..., O_RDWR) pour accéder au tube.
+</pre>
+</div>
+
+<div class="quiz-container">
+    <h2>QCM de Validation</h2>
+    <div class="question">
+        <p>1. Quel est l'avantage principal d'un tube nommé par rapport à un tube anonyme ?</p>
+        <input type="radio" name="q6" value="a"> Il permet la communication entre processus sans lien de parenté.<br>
+        <input type="radio" name="q6" value="b"> Il est plus rapide car il n'est pas stocké sur le disque.<br>
+        <input type="radio" name="q6" value="c"> Il permet une communication bidirectionnelle native.
+    </div>
+    <button onclick="checkQuiz()">Vérifier les réponses</button>
+    <p id="quiz-result"></p>
+</div>
+
+<script>
+function checkQuiz() {
+    let score = 0;
+    const q6 = document.querySelector('input[name="q6"]:checked');
+    if (q6 && q6.value === 'a') score++;
+    const res = document.getElementById('quiz-result');
+    res.innerHTML = "Score : " + score + "/1";
+}
+</script>
+</body>
+</html>

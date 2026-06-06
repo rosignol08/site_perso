@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sémaphores - Master PSCR</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --accent-color: #58a6ff;
+            --text-color: #c9d1d9;
+            --hacker-green: #39ff14;
+            --border-color: #30363d;
+        }
+
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: sans-serif; margin: 0; padding: 0; line-height: 1.6; }
+        nav { background: #161b22; padding: 1rem 2rem; border-bottom: 1px solid var(--border-color); }
+        nav a { color: var(--hacker-green); text-decoration: none; margin-right: 20px; font-weight: bold; }
+        .container { max-width: 1000px; margin: auto; padding: 2rem; }
+        h1, h2, h3 { color: var(--hacker-green); }
+        pre { background: #000; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; border-left: 4px solid var(--hacker-green); }
+        code { font-family: 'Courier New', Courier, monospace; color: #e6edf3; }
+        .info-box { background: rgba(58, 166, 255, 0.1); border: 1px solid var(--accent-color); padding: 1rem; margin: 1rem 0; border-radius: 8px; }
+        .exercise { background: #1c2118; border: 1px dashed var(--hacker-green); padding: 2rem; margin: 2rem 0; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="rev.html">← Dashboard</a>
+    </nav>
+    <div class="container">
+        <h1>Module 3 : Sémaphores</h1>
+        <p>Les sémaphores sont des primitives de synchronisation basées sur un compteur.</p>
+
+        <h2>1. Théorie des Sémaphores</h2>
+        <p>Un sémaphore est une variable entière protégée qui contrôle l'accès à une ressource limitée. Contrairement au mutex (qui est binaire), le sémaphore peut avoir une valeur supérieure à 1.</p>
+        <ul>
+            <li><strong>Opération P (proberen / wait) :</strong> Décrémente le compteur. Si le compteur est à 0, le processus est mis en sommeil jusqu'à ce qu'un autre fasse un V.</li>
+            <li><strong>Opération V (verhogen / post) :</strong> Incrémente le compteur et réveille un processus en attente.</li>
+        </ul>
+
+        <h2>2. Sémaphores POSIX</h2>
+        <p>Il existe deux types de sémaphores dans l'écosystème POSIX :</p>
+        <ul>
+            <li><strong>Sémaphores Nommés (System V ou POSIX) :</strong> Accessibles par des processus sans lien de parenté via un nom (ex: <code>/my_sem</code>).</li>
+            <li><strong>Sémaphores Anonymes :</strong> Utilisés uniquement entre processus liés (souvent via mémoire partagée).</li>
+        </ul>
+
+        <div class="info-box">
+            <strong>Différence Mutex vs Sémaphore :</strong> Un mutex est un verrou d'exclusion mutuelle (propriétaire unique), tandis qu'un sémaphore est une variable de signalisation.
+        </div>
+
+        <h2>3. Implémentation POSIX</h2>
+        <pre>
+#include &lt;semaphore.h&gt;
+#include &lt;stdio.h&gt;
+
+// Initialisation d'un sémaphore nommé
+sem_t *sem = sem_open("/new_sem", O_CREAT | O_RDWR, 0666, 1);
+
+// Utilisation
+sem_wait(sem); // Opération P
+// ... section critique ...
+sem_post(sem); // Opération V
+
+sem_close(sem);
+sem_unlink("/new_sem");
+</pre>
+
+<div class="exercise">
+    <h3>Entraînement : Gestion de Ressources Limitées</h3>
+    <p>Utilisez un sémaphore pour limiter l'accès à une ressource qui ne peut accepter que 3 utilisateurs simultanément.</p>
+    <pre>
+#include &lt;semaphore.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
+
+sem_t *sem_limit;
+
+void* worker(void* id) {
+    printf("Processus %ld attend le sémaphore...\n", (long)id);
+    sem_wait(sem_limit);
+    printf("Processus %ld entre dans la zone.\n", (long)id);
+    sleep(2);
+    sem_post(sem_limit);
+    printf("Processus %ld libère le sémaphore.\n", (long)id);
+    return NULL;
+}
+
+int main() {
+    // Initialiser à 3 pour permettre 3 accès simultanés
+    sem_init(&sem_limit, 1, 3); // Note: ici sem_init pour un sémaphore anonyme
+    // Pour un nommé, utilisez sem_open.
+    
+    // ... code de création des threads ...
+}
+</pre>
+</div>
+
+<div class="quiz-container">
+    <h2>QCM de Validation</h2>
+    <div class="question">
+        <p>1. Quelle est la différence fondamentale entre un Mutex et un Sémaphore ?</p>
+        <input type="radio" name="q5" value="a"> Le sémaphore peut avoir une valeur supérieure à 1.<br>
+        <input type="radio" name="q5" value="b"> Le mutex est plus rapide que le sémaphore.<br>
+        <input type="radio" name="q5" value="c"> Il n'y a aucune différence technique.
+    </div>
+    <button onclick="checkQuiz()">Vérifier les réponses</button>
+    <p id="quiz-result"></p>
+</div>
+
+<script>
+function checkQuiz() {
+    let score = 0;
+    const q5 = document.querySelector('input[name="q5"]:checked');
+    if (q5 && q5.value === 'a') score++;
+    const res = document.getElementById('quiz-result');
+    res.innerHTML = "Score : " + score + "/1";
+}
+</script>
+</body>
+</html>

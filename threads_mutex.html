@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threads & Mutex - Master PSCR</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --accent-color: #58a6ff;
+            --text-color: #c9d1d9;
+            --hacker-green: #39ff14;
+            --border-color: #30363d;
+        }
+
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: sans-serif; margin: 0; padding: 0; line-height: 1.6; }
+        nav { background: #161b22; padding: 1rem 2rem; border-bottom: 1px solid var(--border-color); }
+        nav a { color: var(--hacker-green); text-decoration: none; margin-right: 20px; font-weight: bold; }
+        .container { max-width: 1000px; margin: auto; padding: 2rem; }
+        h1, h2, h3 { color: var(--hacker-green); }
+        pre { background: #000; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; border-left: 4px solid var(--hacker-green); }
+        code { font-family: 'Courier New', Courier, monospace; color: #e6edf3; }
+        .info-box { background: rgba(58, 166, 255, 0.1); border: 1px solid var(--accent-color); padding: 1rem; margin: 1rem 0; border-radius: 8px; }
+        .exercise { background: #1c2128; border: 1px dashed var(--accent-color); padding: 2rem; margin: 2rem 0; border-radius: 10px; }
+        .quiz-container { background: #161b22; padding: 2rem; border: 1px solid var(--hacker-green); border-radius: 15px; }
+
+        /* Animation Mutex */
+        .mutex-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 200px;
+            height: 200px;
+            border: 4px solid #555;
+            border-radius: 50%;
+            margin: 2rem auto;
+            transition: all 0.5s;
+        }
+        .mutex-locked { border-color: red; box-shadow: 0 0 20px red; }
+        .mutex-free { border-color: var(--hacker-green); box-shadow: 0 0 20px var(--hacker-green); }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="rev.html">← Dashboard</a>
+    </nav>
+    <div class="container">
+        <h1>Module 2 : Threads & Mutex</h1>
+        <p>Ce module traite de la concurrence intra-processus et des mécanismes de synchronisation.</p>
+
+        <h2>1. Concept de Thread</h2>
+        <p>Un <strong>thread</strong> est une unité d'exécution au sein d'un processus. Contrairement aux processus, les threads partagent le même espace mémoire (code, données), mais possèdent leur propre pile et registres.</p>
+        <ul>
+            <li><strong>Avantage :</strong> Communication rapide entre unités de calcul.</li>
+            <li><strong>Risque :</strong> Race conditions (accès concurrents non protégés).</li>
+        </ul>
+
+        <h2>2. Atomicité et Data Races</h2>
+        <p>Une opération est <strong>atomique</strong> si elle s'exécute sans être interrompue par un autre thread. En C++, les types `std::atomic` garantissent que des opérations comme l'incrémentation ne sont pas "coupées" au milieu.</p>
+        <div class="info-box">
+            <strong>Danger :</strong> Une opération non atomique (ex: <code>x = x + 1</code>) peut être décomposée en plusieurs instructions machine, permettant à un autre thread d'intervenir entre le chargement et l'écriture.
+        </div>
+
+        <h2>3. Mutex et Section Critique</h2>
+        <p>Un <strong>Mutex</strong> (Mutual Exclusion) est un verrou qui garantit qu'un seul thread accède à une section de code ou à une donnée à la fois.</p>
+        <ul>
+            <li><code>std::mutex</code> : Le type de base.</li>
+            <li><code>std::unique_lock</code> : Gestion RAII du mutex (déverrouillage automatique).</li>
+            <li><strong>Condition Variable</strong> : Permet à un thread d'attendre qu'une condition soit remplie tout en libérant le mutex pendant l'attente.</li>
+        </ul>
+
+        <pre>
+// Exemple de protection avec unique_lock
+#include &lt;iostream&gt;
+#include &lt;thread&gt;
+#include &lt;mutex&gt;
+
+std::mutex mtx;
+int counter = 0;
+
+void increment() {
+    for(int i=0; i&lt;1000; ++i) {
+        std::unique_lock&lt;std::mutex&gt; lock(mtx);
+        counter++; // Section critique protégée
+    }
+}
+
+int main() {
+    std::thread t1(increment);
+    std::thread t2(increment);
+    t1.join();
+    t2.join();
+    std::cout &lt;&lt; "Final count: " &lt;&lt; counter &lt;&lt; std::endl;
+    return 0;
+}</pre>
+
+<div class="exercise">
+    <h3>Entraînement C++ : Condition Variables</h3>
+    <p>Implémentez un producteur/consommateur simple utilisant une condition variable pour signaler que la file n'est plus vide.</p>
+    <pre>
+#include &lt;iostream&gt;
+#include &lt;thread&gt;
+#include &lt;mutex&gt;
+#include &lt;condition_variable&gt;
+
+std::mutex mtx;
+std::condition_variable cv;
+bool ready = false;
+
+void worker() {
+    std::unique_lock&lt;std::mutex&gt; lock(mtx);
+    // --- À COMPLÉTER : Utiliser cv.wait avec un prédicat ---
+    cv.wait(lock, []{ return ready; });
+    std::cout &lt;&lt; "Le travail est prêt !" &lt;&lt; std::endl;
+}
+
+int main() {
+    std::thread t1(worker);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    {
+        std::lock_guard&lt;std::mutex&gt; lock(mtx);
+        ready = true;
+    }
+    cv.notify_one();
+    t1.join();
+    return 0;
+}</pre>
+</div>
+
+<div class="quiz-container">
+    <h2>QCM de Validation</h2>
+    <div class="question">
+        <p>1. Pourquoi utiliser std::unique_lock plutôt que mtx.lock() / mtx.unlock() ?</p>
+        <input type="radio" name="q3" value="a"> Pour la performance brute.<br>
+        <input type="radio" name="q3" value="b"> Pour le principe RAII (déverrouillage automatique en cas d'exception).<br>
+        <input type="radio" name="q3" value="c"> Parce que mtx.lock() n'est pas disponible en C++11.<br>
+    </div>
+    <div class="question">
+        <p>2. Que se passe-t-il si un thread appelle wait() sur une condition variable sans détenir le mutex ?</p>
+        <input type="radio" name="q4" value="a"> Le programme plante immédiatement.<br>
+        <input type="radio" name="q4" value="b"> Le comportement est indéfini (Undefined Behavior).<br>
+        <input type="radio" name="q4" value="c"> Le mutex est automatiquement acquis par le système.
+    </div>
+    <button onclick="checkQuiz()">Vérifier les réponses</button>
+    <p id="quiz-result"></p>
+</div>
+
+<script>
+function checkQuiz() {
+    let score = 0;
+    const q3 = document.querySelector('input[name="q3"]:checked');
+    const q4 = document.querySelector('input[name="q4"]:checked');
+    if (q3 && q3.value === 'b') score++;
+    if (q4 && q4.value === 'b') score++;
+    const res = document.getElementById('quiz-result');
+    res.innerHTML = "Score : " + score + "/2";
+    res.style.color = score === 2 ? "#39ff14" : "red";
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Révision PSCR - Système POSIX</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --error-color: #cf6679;
+            --success-color: #018786;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        h1 { color: var(--accent-color); }
+        h2 { color: var(--secondary-color); border-left: 4px solid var(--accent-color); padding-left: 15px; margin-top: 40px; }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+
+        /* Animations */
+        .animation-box {
+            height: 150px;
+            background: var(--accent-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            position: relative;
+            transition: all 0.5s ease;
+        }
+
+        /* Animation Fork */
+        .fork-container {
+            display: flex;
+            gap: 10px;
+            opacity: 0;
+            animation: forkAction 3s infinite alternate;
+        }
+
+        @keyframes forkAction {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1) translateX(20px); }
+        }
+
+        /* Animation i-node */
+        .inode-visual {
+            display: flex;
+            gap: 20px;
+        }
+        .inode-block {
+            width: 60px;
+            height: 60px;
+            background: var(--secondary-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(3, 218, 198, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(3, 218, 198, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(3, 218, 198, 0); }
+        }
+
+        .quiz-option {
+            display: block;
+            background: #2c2c2c;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .quiz-option:hover {
+            background: #3d3d3d;
+            border-color: var(--accent-color);
+        }
+
+        .correct { border: 2px solid var(--success-color) !important; background: rgba(1, 135, 134, 0.2) !important; }
+        .incorrect { border: 2px solid var(--error-color) !important; background: rgba(207, 102, 127, 0.2) !important; }
+
+        button {
+            background: var(--accent-color);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:hover { transform: scale(1.05); }
+
+        .summary-list {
+            padding-left: 20px;
+        }
+        .summary-list li { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Révision PSCR : Système POSIX</h1>
+        <p>Maîtriser les concepts fondamentaux du système de fichiers et des processus.</p>
+    </header>
+
+    <section id="summary" class="card">
+        <h2>Résumé du Cours</h2>
+        <ul class="summary-list">
+            <li><strong>Système POSIX :</strong> Standard définissant l'interface entre les applications et le noyau (Kernel).</li>
+            <li><strong>i-nodes :</strong> Structures de données décrivant les fichiers (permissions, taille, propriétaires) sans inclure le nom du fichier.</li>
+            <li><strong>Fork() :</strong> Système d'appel permettant la création d'un nouveau processus en copiant l'état du parent.</li>
+            <li><strong>Gestion des Processus :</strong> Utilisation des PID, gestion des signaux et de l'espace mémoire.</li>
+        </ul>
+    </section>
+
+    <section id="concepts" class="card">
+        <h2>Concepts Clés & Visualisations</h2>
+        
+        <h3>1. Le concept d'i-node</h3>
+        <p>Un i-node est le "numéro de série" du fichier dans le système de fichiers. Il contient tout, sauf le nom.</p>
+        <div class="inode-visual">
+            <div class="inode-block"></div>
+            <small>Représentation d'un i-node (Metadata)</small>
+        </div>
+
+        <h3>2. Le mécanisme du Fork</h3>
+        <p>Lors d'un <code>fork()</code>, le système crée une copie exacte du processus actuel.</p>
+        <div class="animation-box">
+            <div class="fork-container">
+                <div style="width:40px; height:40px; background:white; border-radius:50%;"></div>
+                <div style="width:40px; height:40px; background:white; border-radius:50%; animation-delay: 0.5s;"></div>
+            </div>
+        </div>
+        <p><small>Animation : Le processus parent se divise pour créer un enfant.</small></p>
+    </section>
+
+    <section id="quiz" class="card">
+        <h2>QCM Interactif</h2>
+        <div id="quiz-container">
+            <p><strong>Question 1: Que contient un i-node ?</strong></p>
+            <div class="quiz-option" onclick="checkAnswer(this, true)">Les métadonnées (taille, permissions, propriétaire)</div>
+            <div class="quiz-option" onclick="checkAnswer(this, false)">Le nom du fichier et son contenu texte.</div>
+            <div class="quiz-option" onclick="checkAnswer(this, false)">Uniquement le chemin d'accès absolu.</div>
+
+            <hr style="border: 0.5px solid #333; margin: 20px 0;">
+
+            <p><strong>Question 2: Quel est l'effet principal de la fonction fork() ?</strong></p>
+            <div class="quiz-option" onclick="checkAnswer(this, false)">Terminer le processus actuel immédiatement.</div>
+            <div class="quiz-option" onclick="checkAnswer(this, true)">Créer un nouveau processus qui est une copie du parent.</div>
+            <div class="quiz-option" onclick="checkAnswer(this, false)">Allouer de la mémoire pour une nouvelle variable globale.</div>
+        </div>
+    </section>
+
+    <footer style="text-align: center; padding: 20px; color: #666;">
+        <p>Révision PSCR - Master Informatique</p>
+    </footer>
+</div>
+
+<script>
+    function checkAnswer(element, isCorrect) {
+        // On cherche les autres options dans le même groupe (parent commun)
+        const parent = element.parentElement;
+        const options = parent.querySelectorAll('.quiz-option');
+        
+        options.forEach(opt => {
+            opt.classList.remove('correct', 'incorrect');
+        });
+
+        if (isCorrect) {
+            element.classList.add('correct');
+        } else {
+            element.classList.add('incorrect');
+        }
+    }
+</script>
+
+</body>
+</html>

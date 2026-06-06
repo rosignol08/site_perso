@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processus & Fork - Master PSCR</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --accent-color: #58a6ff;
+            --text-color: #c9d1d9;
+            --hacker-green: #39ff14;
+            --border-color: #30363d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        nav {
+            background: #161b22;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        nav a {
+            color: var(--hacker-green);
+            text-decoration: none;
+            margin-right: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            padding: 2rem;
+        }
+
+        h1, h2, h3 { color: var(--hacker-green); }
+
+        pre {
+            background: #000;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+            border-left: 4px solid var(--hacker-green);
+        }
+
+        code { font-family: 'Courier New', Courier, monospace; color: #e6edf3; }
+
+        .info-box {
+            background: rgba(57, 255, 10, 0.1);
+            border: 1px solid var(--hacker-green);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+        }
+
+        .exercise {
+            background: #1c2128;
+            border: 1px dashed var(--accent-color);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 10px;
+        }
+
+        .quiz-container {
+            background: #161b22;
+            padding: 2rem;
+            border: 1px solid var(--hacker-green);
+            border-radius: 15px;
+        }
+
+        .question { margin-bottom: 1.5rem; }
+        .option { display: block; margin-bottom: 0.5rem; cursor: pointer; }
+
+        /* Animation Fork */
+        .fork-animation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            background: #161b22;
+            border-radius: 10px;
+            margin: 2rem 0;
+        }
+
+        .process-block {
+            width: 80px;
+            height: 80px;
+            background: var(--hacker-green);
+            color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-radius: 10px;
+        }
+
+        .fork-line {
+            height: 4px;
+            background: var(--hacker-green);
+            width: 100px;
+            margin: 0 20px;
+        }
+
+        @keyframes split {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1) translateX(40px); }
+        }
+
+        .fork-child {
+            animation: split 2s forwards;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="rev.html">← Dashboard</a>
+    </main>
+    <div class="container">
+        <h1>Module 1 : Processus et Fork</h1>
+        <p>Ce module explore les fondements de la gestion des processus sous POSIX.</p>
+
+        <h2>1. Concepts Fondamentaux</h2>
+        <p>Un <strong>processus</strong> est une entité active du système, possédant son propre espace d'adressage (code, données, pile), un identifiant unique (PID) et des ressources allouées par le noyau.</p>
+        <ul>
+            <li><strong>Identité :</strong> PID (Process ID), UID/GID (User/Group IDs).</li>
+            <li><strong>Espace d'adressage :</strong> Isolé pour chaque processus. Deux processus ne peuvent pas accéder directement à la mémoire de l'autre sans mécanismes spécifiques (IPC).</li>
+        </ul>
+
+        <div class="info-box">
+            <strong>Note Technique :</strong> Le passage du mode utilisateur au mode noyau se fait via des appels système (System Calls), comme <code>fork()</code>, <code>exec()</code> ou <code>wait()</code>.
+        </div>
+
+        <h2>2. Création de Processus avec fork()</h2>
+        <p>La primitive <code>fork()</code> crée une copie quasi-identique du processus appelant.</p>
+        <ul>
+            <li><strong>Retour dans le Père :</strong> Le PID du nouveau processus fils.</li>
+            <li><strong>Retour dans le Fils :</strong> Zéro (0).</li>
+            <li><strong>Échec :</strong> -1.</li>
+        </ul>
+
+        <div class="fork-animation">
+            <div class="process-block">Père</div>
+            <div class="fork-line"></div>
+            <div class="process-block fork-child">Fils</div>
+        </div>
+
+        <h2>3. Exécution de nouveaux programmes (exec)</h2>
+        <p>La famille <code>exec</code> remplace l'image du processus actuel par une nouvelle image.</p>
+        <ul>
+            <li><strong>execl()</strong> : Liste d'arguments.</li>
+            <li><strong>execv()</strong> : Vecteur d'arguments.</li>
+            <li><strong>execle()</strong> : Avec un environnement personnalisé.</li>
+        </ul>
+
+        <h2>4. Synchronisation Père/Fils (wait)</h2>
+        <p>Le processus père peut attendre la fin de ses fils via <code>wait()</code> ou <code>waitpid()</code>.</p>
+        <pre>
+#include &lt;sys/wait.h&gt;
+#include &lt;unistd.h&gt;
+
+int main() {
+    pid_t pid = fork();
+    if (pid == 0) {
+        // Code du fils
+        printf("Je suis le fils\n");
+    } else if (pid > 0) {
+        // Code du père
+        wait(NULL); // Attend que le fils termine
+        printf("Le fils a terminé\n");
+    }
+    return 0;
+}</pre>
+
+<div class="exercise">
+    <h3>Entraînement C++ : Gestion des Signaux et Fork</h3>
+    <p>Complétez le code suivant pour qu'il affiche "Fils" ou "Père" et utilise <code>wait()</code> correctement.</p>
+    <pre>
+#include &lt;iostream&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/wait.h&gt;
+
+int main() {
+    pid_t pid = fork();
+    if (pid == 0) {
+        // --- À COMPLÉTER ---
+        std::cout &lt;&lt; "Je suis le "; // Ajoutez la condition pour afficher "Fils" ou "Père"
+    } else if (pid &gt; 0) {
+        wait(NULL);
+        std::cout &lt;&lt; "Le fils a fini." &lt;&lt; std::endl;
+    }
+    return 0;
+}
+    </pre>
+    <p><strong>Compilation :</strong> <code>g++ -o test_fork test_fork.cpp</code></p>
+</div>
+
+<div class="quiz-container">
+    <h2>QCM de Validation</h2>
+    <div class="question">
+        <p>1. Quelle est la valeur retournée par fork() dans le processus fils ?</p>
+        <input type="radio" name="q1" value="a"> Le PID du père<br>
+        <input type="radio" name="q1" value="b"> 0<br>
+        <input type="radio" name="q1" value="c"> -1<br>
+    </div>
+    <div class="question">
+        <p>2. Quelle est la différence majeure entre fork() et exec() ?</p>
+        <input type="radio" name="q2" value="a"> fork crée un nouveau processus, exec remplace l'image du processus actuel.<br>
+        <input type="radio" name="q2" value="b"> Il n'y a aucune différence.<br>
+        <input type="radio" name="q2" value="c"> exec ne peut pas être utilisé après un fork.<br>
+    </div>
+    <button onclick="checkQuiz()">Vérifier les réponses</button>
+    <p id="quiz-result"></p>
+</div>
+
+<script>
+function checkQuiz() {
+    let score = 0;
+    const q1 = document.querySelector('input[name="q1"]:checked');
+    const q2 = document.querySelector('input[name="q2"]:checked');
+    
+    if (q1 && q1.value === 'b') score++;
+    if (q2 && q2.value === 'a') score++;
+    
+    const res = document.getElementById('quiz-result');
+    res.innerHTML = "Score : " + score + "/2";
+    res.style.color = score === 2 ? "#39ff14" : "red";
+}
+</script>
+</body>
+</html>
