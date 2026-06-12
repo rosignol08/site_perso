@@ -197,14 +197,13 @@ class Unit {
             }
         }
     }
-behaviorIdle(deltaTime) {
+    behaviorIdle(deltaTime) {
         const manager = this.unitSystem.getManager(this.team);
 
         // ==========================================
-        // 1. INGÉNIEUR (Priorité Bâtisseur)
+        // 1. INGÉNIEUR (Priorité Bâtisseur de Réseau)
         // ==========================================
         if (this.role === 'ENGINEER') {
-            // A. Aider un copain sur un chantier
             const chantier = manager.findActiveChantier();
             if (chantier && chantier.addBuilder(this)) {
                 this.currentFortif = chantier;
@@ -213,16 +212,16 @@ behaviorIdle(deltaTime) {
                 return;
             }
 
-            // B. Créer une extension ou bâtir au front
             if (this.buildCheckTimer >= this.BUILD_CHECK_INTERVAL) {
-                this.buildCheckTimer = 0; // On reset le chrono
+                this.buildCheckTimer = 0; 
                 
-                let fortif = manager.requestExtension(this);
+                // Priorité A : Tenter de relier des tranchées existantes
+                let fortif = manager.requestConnection(this);
                 
-                // Si aucune extension n'est possible, on bâtit une nouvelle ligne SI on est au front
+                // Priorité B : Si tout est déjà relié ou rien à relier, on pose un Bunker !
                 const isNearFront = Math.abs(this.mesh.position.x) < 40;
-                if (!fortif && isNearFront && manager.canIBuild(this)) {
-                    fortif = manager.requestBuild(this);
+                if (!fortif && isNearFront) {
+                    fortif = manager.requestBunker(this);
                 }
 
                 if (fortif) {
@@ -234,7 +233,7 @@ behaviorIdle(deltaTime) {
                 }
             }
             
-            // C. Rôde prudemment (avance vers le front)
+            // S'il n'a rien à construire, il avance prudemment
             const frontDir = (this.team === 0) ? 1 : -1;
             this.setDestination(new THREE.Vector3(this.mesh.position.x + frontDir * 10, 0, this.mesh.position.z + (Math.random() - 0.5)*15));
             this.state = 'MOVING';
@@ -261,19 +260,33 @@ behaviorIdle(deltaTime) {
         // ==========================================
         // 3. SOLDAT CLASSIQUE (Priorité Fusilier)
         // ==========================================
-        const cover = manager.findCoverNearby(this.mesh.position, 25); 
+        
+        let cover = null;
+        // S'il est DÉJÀ dans une tranchée, il ne cherche que dans les tranchées connectées (Graphe)
+        if (this.currentFortif) {
+            cover = manager.findConnectedCover(this.currentFortif);
+        } else {
+            // S'il est à découvert dans le No Man's Land, il cherche la plus proche physiquement
+            cover = manager.findCoverNearby(this.mesh.position, 25); 
+        }
+
         if (cover && cover.addOccupant(this)) {
+            // S'il a trouvé une place, il quitte son ancienne tranchée pour rejoindre la nouvelle
+            if (this.currentFortif && this.currentFortif !== cover) {
+                this.currentFortif.removeOccupant(this);
+            }
             this.currentFortif = cover;
             this.state = 'DEFENDING';
             return;
         }
 
+        // Sinon, il fait sa vie normale (creuser ou avancer)
         if (this.buildCheckTimer >= this.BUILD_CHECK_INTERVAL) {
             this.buildCheckTimer = 0;
             const isNearFront = Math.abs(this.mesh.position.x) < 40; 
             
-            if ((this.hasSeenCombat || isNearFront) && manager.canIBuild(this)) {
-                const fortif = manager.requestBuild(this);
+            if ((this.hasSeenCombat || isNearFront) && !this.currentFortif) {
+                const fortif = manager.requestTrench(this);
                 if (fortif) {
                     fortif.addBuilder(this);
                     this.currentFortif = fortif;
@@ -284,13 +297,15 @@ behaviorIdle(deltaTime) {
             }
         }
 
-        const frontDir = (this.team === 0) ? 1 : -1;
-        const targetX = this.mesh.position.x + frontDir * (15 + Math.random() * 10);
-        const targetZ = this.mesh.position.z + (Math.random() - 0.5) * 15; 
-        this.setDestination(new THREE.Vector3(targetX, 0, targetZ));
-        this.state = 'MOVING';
+        // On n'avance vers l'ennemi que si on n'a vraiment aucune tranchée
+        if (!this.currentFortif) {
+            const frontDir = (this.team === 0) ? 1 : -1;
+            const targetX = this.mesh.position.x + frontDir * (15 + Math.random() * 10);
+            const targetZ = this.mesh.position.z + (Math.random() - 0.5) * 15; 
+            this.setDestination(new THREE.Vector3(targetX, 0, targetZ));
+            this.state = 'MOVING';
+        }
     }
-
     behaviorMove(deltaTime) {
         if (!this.targetPosition) { this.state = 'IDLE'; return; }
         const dist2D = new THREE.Vector2(this.mesh.position.x, this.mesh.position.z)

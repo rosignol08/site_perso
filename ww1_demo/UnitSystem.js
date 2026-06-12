@@ -43,10 +43,6 @@ class UnitSystem {
         this.getManager(team).orderGlobalCharge();
     }
 
-    getManager(team) {
-        return (team === 0) ? this.managerBlue : this.managerRed;
-    }
-
     addTrench(trench) {
         this.trenches.push(trench);
     }
@@ -84,8 +80,8 @@ class UnitSystem {
         this.units.forEach(u => u.update(deltaTime, this.terrain.mesh));
 
         // 2. IMPORTANT : Update des Managers pour qu'ils planifient les nouvelles lignes
-        this.managerBlue.update();
-        this.managerRed.update();
+        this.managerBlue.update(deltaTime);
+        this.managerRed.update(deltaTime);
     }
 }
 
