@@ -17,9 +17,21 @@ class UnitSystem {
         this.managerRed = new ConstructionManager(scene, terrain, 1, 80, -1);
     }
 
+    //spawnUnit(x, z, team) {
+    //    const startPos = new THREE.Vector3(x, 50, z);
+    //    const unit = new Unit(this.scene, startPos, team, this);
+    //    this.units.push(unit);
+    //}
     spawnUnit(x, z, team) {
         const startPos = new THREE.Vector3(x, 50, z);
-        const unit = new Unit(this.scene, startPos, team, this);
+        
+        // --- DISTRIBUTION DES RÔLES OBLIGATOIRE ---
+        const rand = Math.random();
+        let role = 'RIFLEMAN';
+        if (rand < 0.25) role = 'ENGINEER';    // 25% construisent et relient !
+        else if (rand < 0.45) role = 'MELEE';  // 20% d'assaut
+        
+        const unit = new Unit(this.scene, startPos, team, this, role);
         this.units.push(unit);
     }
 

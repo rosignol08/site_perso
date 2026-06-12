@@ -203,7 +203,7 @@ function animate() {
             // C. Le son est déjà géré dans ArtillerySystem, pas besoin ici !
         });
         terrain.update();
-        console.log("update", explosions.length)
+        //console.log("update", explosions.length)
     }
     renderer.render(scene, camera);
     requestAnimationFrame(animate);

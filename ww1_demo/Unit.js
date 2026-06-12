@@ -3,33 +3,37 @@ import Rifle from './Rifle.js';
 import { assetManager } from './AssetManager.js';
 
 class Unit {
-    constructor(scene, startPosition, team, unitSystem) {
+    constructor(scene, startPosition, team, unitSystem, role = 'RIFLEMAN') {
         this.scene = scene;
         this.unitSystem = unitSystem;
         this.team = team; 
+        this.role = role; // 'RIFLEMAN', 'ENGINEER', ou 'MELEE'
         
-        // Enregistrement auprès du manager pour la charge globale
         const manager = this.unitSystem.getManager(this.team);
         manager.registerSoldier(this);
 
         this.hp = 100;
         this.isDead = false;
+        this.hasSeenCombat = false; 
 
-       // --- VISUEL 3D ---
-        // On récupère le modèle depuis l'AssetManager
+       // --- VISUEL 3D & COULEURS ---
         const asset = assetManager.getSoldierInstance();
         this.mesh = asset.mesh;
         
-        // Couleur d'équipe
-        const teamColor = team === 0 ? 0x0000FF : 0xFF0000;
-        
-        // On parcourt le modèle pour trouver le maillage du corps et le colorier
+        const baseColor = team === 0 ? 0x0000FF : 0xFF0000;
+        let finalColor = new THREE.Color(baseColor);
+
+        // Teinture selon le rôle
+        if (this.role === 'ENGINEER') {
+            finalColor.lerp(new THREE.Color(0xFFFF00), 0.4); // Teinte jaune
+        } else if (this.role === 'MELEE') {
+            finalColor.lerp(new THREE.Color(0x000000), 0.7); // Très sombre
+        }
+
         this.mesh.traverse((child) => {
             if (child.isMesh) {
-                // IMPORTANT: Cloner le material pour que chaque soldat ait sa couleur
                 child.material = child.material.clone();
-                // On garde la texture s'il y en a une, mais on teinte
-                child.material.color.setHex(teamColor);
+                child.material.color.copy(finalColor);
             }
         });
 
@@ -38,90 +42,86 @@ class Unit {
         
         // --- ANIMATIONS ---
         this.mixer = new THREE.AnimationMixer(this.mesh);
-        this.actions = {}; // Pour stocker les actions (Idle, Run...)
-
-        // On lie les clips chargés aux actions du mixer
+        this.actions = {}; 
         asset.animations.forEach((clip) => {
             const action = this.mixer.clipAction(clip);
             this.actions[clip.name] = action;
         });
 
-        // Lancer l'animation par défaut
         this.activeAction = this.actions['Idle'];
         if(this.activeAction) this.activeAction.play();
 
-        // --- LOGIQUE ---
+        // --- STATS SELON LE RÔLE ---
         this.rifle = new Rifle(scene, this); 
-        // NOTE: Idéalement il faudrait attacher le rifle à l'os de la main (RightHand)
-        // Pour l'instant il flottera ou suivra le centre, on pourra l'améliorer.
-
-        this.speed = 4.0 + Math.random(); // Vitesse un peu ajustée pour l'anim de course
+        
+        if (this.role === 'MELEE') {
+            this.speed = 6.5 + Math.random() * 2; // Très rapide
+            this.combatRange = 4; // Attaque de contact
+        } else if (this.role === 'ENGINEER') {
+            this.speed = 4.0 + Math.random();
+            this.combatRange = 40; 
+        } else {
+            // RIFLEMAN (Classique)
+            this.speed = 4.0 + Math.random();
+            this.combatRange = 50; 
+        }
+        
         this.state = 'IDLE';
-
-        this.maxSlopeAngle = 90; // Angle max de pente (en degrés)
+        this.maxSlopeAngle = 90; 
+        this.targetEnemy = null;
         
-        this.currentTask = null; // { type: 'BUILD'|'DEFEND', target: Trench }
+        // --- SYSTEME DE CONSTRUCTION ---
+        this.currentFortif = null;  
+        this.buildCheckTimer = 0;   
+        this.BUILD_CHECK_INTERVAL = 2; 
+        this.targetPosition = null; 
         
+        // --- PHYSIQUE ---
         this.raycaster = new THREE.Raycaster();
         this.raycaster.firstHitOnly = true; 
         this.downVector = new THREE.Vector3(0, -1, 0);
-
-        this.combatRange = 40;
-        
-        // --- DÉBLOCAGE AUTO ---
         this.lastPos = startPosition.clone();
         this.stuckTimer = 0;
-        this.stuckThreshold = 1.5; // Temps avant déblocage (en secondes)
+        this.stuckThreshold = 1.5; 
     }
 
-    // Fonction pour changer d'animation en douceur
     fadeToAction(name, duration = 0.2) {
         const nextAction = this.actions[name];
         if (!nextAction || this.activeAction === nextAction) return;
-
-        // Si l'anim n'existe pas (ex: pas de 'Dig'), on fallback sur 'Idle'
-        if (!nextAction) {
-            console.warn(`Animation ${name} manquante`);
-            return;
-        }
-
         nextAction.reset();
         nextAction.setEffectiveTimeScale(1);
         nextAction.setEffectiveWeight(1);
-        
-        // Transition fluide
         nextAction.crossFadeFrom(this.activeAction, duration, true);
         nextAction.play();
-        
         this.activeAction = nextAction;
     }
 
     update(deltaTime, terrainMesh) {
         if (this.isDead) return;
+        this.buildCheckTimer += deltaTime; 
 
-        // 1. Mise à jour de l'animation
         if (this.mixer) this.mixer.update(deltaTime);
-
-        // 2. Physique
         this.updateHeight(terrainMesh);
         this.rifle.update(deltaTime);
 
-        // 3. Gestion des États -> Animations
-        // On détermine quelle animation jouer selon l'état
+        // Gestion Animations
         if (this.state === 'MOVING' || this.state === 'CHARGING') {
             this.fadeToAction('Run');
         } 
         else if (this.state === 'BUILDING') {
-            this.fadeToAction('Dig'); 
+            if (this.targetPosition && this.mesh.position.distanceTo(this.targetPosition) > 1.5) {
+                this.fadeToAction('Run');
+            } else {
+                this.fadeToAction('Dig'); 
+            }
         } 
         else if (this.state === 'COMBAT' || (this.state === 'DEFENDING' && this.targetEnemy)) {
-            this.fadeToAction('Shoot');
+            this.fadeToAction('Shoot'); // Remarque: le corps à corps utilise l'anim Shoot pour l'instant
         } 
         else {
             this.fadeToAction('Idle');
         }
 
-        // 4. Logique Comportementale
         if (this.state === 'CHARGING') {
             this.behaviorCharge(deltaTime);
             return;
@@ -131,7 +131,7 @@ class Unit {
         }
 
         switch (this.state) {
-            case 'IDLE':      this.behaviorIdle(); break;
+            case 'IDLE':      this.behaviorIdle(deltaTime); break;
             case 'MOVING':    this.behaviorMove(deltaTime); break;
             case 'BUILDING':  this.behaviorBuild(deltaTime); break;
             case 'DEFENDING': this.behaviorDefend(deltaTime); break;
@@ -139,336 +139,328 @@ class Unit {
         }
     }
 
-    // Vérifie s'il y a des ennemis proches
     scanForThreats() {
-        // On ne scanne pas à chaque frame pour les perfs (1 fois tous les 0.2s)
         if (Math.random() > 0.2) return;
 
-        // Si on a déjà une cible vivante et proche, on reste concentré dessus
-        if (this.targetEnemy && !this.targetEnemy.isDead) {
-            const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
-            if (dist < this.combatRange) {
-                // Si on était en train de construire ou marcher, on arrête tout pour se battre
-                if (this.state === 'BUILDING' || this.state === 'MOVING' || this.state === 'IDLE') {
-                    this.enterCombatMode();
-                }
-                return;
-            }
-        }
-
-        // Sinon on cherche le plus proche
         const nearest = this.unitSystem.getNearestEnemy(this);
         if (nearest) {
             const dist = this.mesh.position.distanceTo(nearest.mesh.position);
-            if (dist < this.combatRange) {
+            
+            // L'Assaut "voit" la cible de loin (80m) pour courir dessus
+            const aggroRange = (this.role === 'MELEE') ? 80 : this.combatRange;
+
+            if (dist < aggroRange) {
                 this.targetEnemy = nearest;
-                // Si on est à découvert (pas DEFENDING), on passe en COMBAT
-                if (this.state !== 'DEFENDING') {
-                    this.enterCombatMode();
+                if (this.state !== 'COMBAT') {
+                    // Si on est défensif, seul le MELEE ose sortir pour attaquer de loin
+                    if (this.state !== 'DEFENDING' || this.role === 'MELEE') {
+                        this.enterCombatMode();
+                    }
                 }
             }
         }
     }
 
     enterCombatMode() {
-        console.log("Ennemi en vue ! J'arrête de travailler !");
-        
-        // On lâche le chantier actuel
-        if (this.currentTask && this.currentTask.type === 'BUILD') {
-            this.currentTask.target.removeBuilder(this);
+        if (this.currentFortif) {
+            this.currentFortif.removeBuilder(this);
+            this.currentFortif.removeOccupant(this);
+            this.currentFortif = null;
         }
-        // On lâche le poste de défense si on veut bouger (optionnel)
-        // Ici on dit : COMBAT = Escarmouche à découvert
-        
+        this.hasSeenCombat = true; 
         this.state = 'COMBAT';
     }
 
     behaviorCombat(deltaTime) {
-        if (!this.targetEnemy || this.targetEnemy.isDead || this.mesh.position.distanceTo(this.targetEnemy.mesh.position) > this.combatRange * 1.5) {
+        if (!this.targetEnemy || this.targetEnemy.isDead || this.mesh.position.distanceTo(this.targetEnemy.mesh.position) > 120) {
             this.targetEnemy = null;
-            this.state = 'IDLE';
+            this.state = 'IDLE'; 
             return;
         }
 
         this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
-        this.rifle.shoot(this.targetEnemy);
-        //si on est trop proche on recule un peu
         const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
-        if (dist < this.combatRange * 0.5) {
-            const dir = new THREE.Vector3().subVectors(this.mesh.position, this.targetEnemy.mesh.position);
-            dir.y = 0;
-            dir.normalize();
-            this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
-        }
-    }
-    
 
-    behaviorIdle() {
-        // Demander un travail au manager
-        const manager = this.unitSystem.getManager(this.team);
-        const task = manager.assignTask(this.mesh.position);
-
-        if (task) {
-            this.currentTask = task;
-            
-            if (task.type === 'BUILD') {
-                // Tenter de s'inscrire comme constructeur
-                if (task.target.addBuilder(this)) {
-                    this.state = 'MOVING';
-                }
-            } 
-            else if (task.type === 'DEFEND') {
-                // Tenter de s'inscrire comme occupant
-                if (task.target.addOccupant(this)) {
-                    this.state = 'MOVING';
-                }
-            }
-        } else {
-            // Rien à faire ? On regarde bêtement l'ennemi
-            // Ou on patrouille
-        }
-    }
-
-    behaviorMove(deltaTime) {
-        if (!this.currentTask) { this.state = 'IDLE'; return; }
-
-        // On va vers le milieu de la structure
-        // Astuce : cible un point aléatoire autour du centre pour éviter que les soldats se superposent
-        const targetPos = this.currentTask.target.startPos.clone(); 
-        
-        const dist = this.mesh.position.distanceTo(targetPos);
-
-        if (dist < 2.0) {
-            // Arrivé !
-            if (this.currentTask.type === 'BUILD') {
-                this.state = 'BUILDING';
+        if (this.role === 'MELEE') {
+            if (dist > this.combatRange) {
+                this.moveTo(this.targetEnemy.mesh.position, deltaTime); // Sprint
             } else {
-                this.state = 'DEFENDING';
+                this.rifle.shoot(this.targetEnemy); // "Coup de couteau"
             }
         } else {
-            this.moveTo(targetPos, deltaTime);
+            this.rifle.shoot(this.targetEnemy);
+            // Les tireurs reculent s'ils sont trop approchés
+            if (dist < this.combatRange * 0.4) {
+                const dir = new THREE.Vector3().subVectors(this.mesh.position, this.targetEnemy.mesh.position);
+                dir.y = 0; dir.normalize();
+                this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
+            }
         }
     }
-
-    behaviorBuild(deltaTime) {
-        const structure = this.currentTask?.target;
-        if (!structure || structure.isFinished) {
-            if (structure) structure.removeBuilder(this);
-            this.currentTask = null;
-            this.state = 'IDLE';
-            return;
-        }
-        
-        // On tourne le perso pour faire face au chantier si nécessaire (optionnel)
-        
-        this.digTimer = (this.digTimer || 0) + deltaTime;
-        if (this.digTimer > 0.1) {
-            const speed = structure.type === 'BUNKER' ? 0.01 : 0.05; 
-            structure.dig(speed);
-            this.digTimer = 0;
-        }
-    }
-
-behaviorDefend(deltaTime) {
-    // Tirer depuis la tranchée
-    if (this.targetEnemy && !this.targetEnemy.isDead) {
-         const dist = this.mesh.position.distanceTo(this.targetEnemy.mesh.position);
-         if(dist < 60) {
-             this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
-             this.rifle.shoot(this.targetEnemy);
-         }
-    } else {
-         const lookDir = (this.team === 0) ? 1 : -1; 
-         this.mesh.lookAt(this.mesh.position.x + lookDir * 100, this.mesh.position.y, 0);
-    }
-
-    this.jobCheckTimer = (this.jobCheckTimer || 0) + deltaTime;
-    
-    if (this.jobCheckTimer > 1.0) {
-        this.jobCheckTimer = 0;
-        
+behaviorIdle(deltaTime) {
         const manager = this.unitSystem.getManager(this.team);
-        const newTask = manager.assignTask(this.mesh.position);
 
-        if (newTask) {
-            // ✅ PRIORITÉ 1 : CONSTRUIRE (même en combat)
-            if (newTask.type === 'BUILD') {
-                this.leaveTrenchAndGo(newTask);
+        // ==========================================
+        // 1. INGÉNIEUR (Priorité Bâtisseur)
+        // ==========================================
+        if (this.role === 'ENGINEER') {
+            // A. Aider un copain sur un chantier
+            const chantier = manager.findActiveChantier();
+            if (chantier && chantier.addBuilder(this)) {
+                this.currentFortif = chantier;
+                this.state = 'BUILDING';
+                this.setDestination(chantier.getBuildPosition(this));
                 return;
             }
 
-            // ✅ PRIORITÉ 2 : DÉFENDRE MIEUX (seulement si pas de combat proche)
-            if (newTask.type === 'DEFEND') {
-                // Si je tire sur un ennemi proche, je ne bouge pas
-                if (this.targetEnemy && !this.targetEnemy.isDead && 
-                    this.mesh.position.distanceTo(this.targetEnemy.mesh.position) < 30) {
-                    return; // ⚠️ Maintenant c'est après avoir vérifié BUILD
+            // B. Créer une extension ou bâtir au front
+            if (this.buildCheckTimer >= this.BUILD_CHECK_INTERVAL) {
+                this.buildCheckTimer = 0; // On reset le chrono
+                
+                let fortif = manager.requestExtension(this);
+                
+                // Si aucune extension n'est possible, on bâtit une nouvelle ligne SI on est au front
+                const isNearFront = Math.abs(this.mesh.position.x) < 40;
+                if (!fortif && isNearFront && manager.canIBuild(this)) {
+                    fortif = manager.requestBuild(this);
                 }
 
-                const currentX = this.assignedTrench ? this.assignedTrench.startPos.x : this.mesh.position.x;
-                const newX = newTask.target.startPos.x;
-                const frontDir = (this.team === 0) ? 1 : -1;
+                if (fortif) {
+                    fortif.addBuilder(this);
+                    this.currentFortif = fortif;
+                    this.state = 'BUILDING';
+                    this.setDestination(fortif.getBuildPosition(this));
+                    return;
+                }
+            }
+            
+            // C. Rôde prudemment (avance vers le front)
+            const frontDir = (this.team === 0) ? 1 : -1;
+            this.setDestination(new THREE.Vector3(this.mesh.position.x + frontDir * 10, 0, this.mesh.position.z + (Math.random() - 0.5)*15));
+            this.state = 'MOVING';
+            return;
+        }
 
-                if ((newX - currentX) * frontDir > 10) {
-                    this.leaveTrenchAndGo(newTask);
+        // ==========================================
+        // 2. CORPS À CORPS (Priorité Assaut)
+        // ==========================================
+        if (this.role === 'MELEE') {
+            const enemyManager = this.unitSystem.getManager(this.team === 0 ? 1 : 0);
+            const targetTrench = enemyManager.findCoverNearby(this.mesh.position, 100);
+            
+            if (targetTrench) {
+                this.setDestination(targetTrench.position);
+            } else {
+                const frontDir = (this.team === 0) ? 1 : -1;
+                this.setDestination(new THREE.Vector3(this.mesh.position.x + frontDir * 30, 0, this.mesh.position.z));
+            }
+            this.state = 'MOVING';
+            return;
+        }
+
+        // ==========================================
+        // 3. SOLDAT CLASSIQUE (Priorité Fusilier)
+        // ==========================================
+        const cover = manager.findCoverNearby(this.mesh.position, 25); 
+        if (cover && cover.addOccupant(this)) {
+            this.currentFortif = cover;
+            this.state = 'DEFENDING';
+            return;
+        }
+
+        if (this.buildCheckTimer >= this.BUILD_CHECK_INTERVAL) {
+            this.buildCheckTimer = 0;
+            const isNearFront = Math.abs(this.mesh.position.x) < 40; 
+            
+            if ((this.hasSeenCombat || isNearFront) && manager.canIBuild(this)) {
+                const fortif = manager.requestBuild(this);
+                if (fortif) {
+                    fortif.addBuilder(this);
+                    this.currentFortif = fortif;
+                    this.state = 'BUILDING';
+                    this.setDestination(fortif.getBuildPosition(this));
                     return;
                 }
             }
         }
-    }}
 
-
-// Petite fonction utilitaire pour éviter de dupliquer le code
-leaveTrenchAndGo(task) {
-    // Sortir proprement de la tranchée actuelle
-    if (this.assignedTrench) {
-        this.assignedTrench.removeOccupant(this);
-        this.assignedTrench = null;
+        const frontDir = (this.team === 0) ? 1 : -1;
+        const targetX = this.mesh.position.x + frontDir * (15 + Math.random() * 10);
+        const targetZ = this.mesh.position.z + (Math.random() - 0.5) * 15; 
+        this.setDestination(new THREE.Vector3(targetX, 0, targetZ));
+        this.state = 'MOVING';
     }
 
-    // Accepter la nouvelle mission
-    this.currentTask = task;
-    if (task.type === 'BUILD') task.target.addBuilder(this);
-    else task.target.addOccupant(this); // DEFEND
+    behaviorMove(deltaTime) {
+        if (!this.targetPosition) { this.state = 'IDLE'; return; }
+        const dist2D = new THREE.Vector2(this.mesh.position.x, this.mesh.position.z)
+            .distanceTo(new THREE.Vector2(this.targetPosition.x, this.targetPosition.z));
 
-    this.state = 'MOVING';
-}
-
-// --- LA CHARGE ---
-startCharge() {
-    // Appelé directement par le Manager
-    this.state = 'CHARGING';
-    this.currentTask = null; // On oublie le chantier
-    this.speed *= 1.5; 
-}
-
-behaviorCharge(deltaTime) {
-    // Trouver l'ennemi le plus proche
-    let target = this.unitSystem.getNearestEnemy(this);
-    
-    if (target) {
-        const dist = this.mesh.position.distanceTo(target.mesh.position);
-        
-        // Si loin, on court
-        if (dist > 2.0) {
-            this.moveTo(target.mesh.position, deltaTime);
+        if (dist2D < 1.5 || this.stuckTimer > 2.0) {
+            this.state = 'IDLE';
+            this.targetPosition = null;
+            this.stuckTimer = 0;
+        } else {
+            this.moveTo(this.targetPosition, deltaTime);
         }
-        // Tirer en courant
-        if (dist < 50) this.rifle.shoot(target);
-    } else {
-        // Si plus d'ennemi, on court vers le camp adverse
-        const enemyCampX = (this.team === 0) ? 100 : -100;
-        this.moveTo(new THREE.Vector3(enemyCampX, 0, this.mesh.position.z), deltaTime);
     }
-}
 
-// --- OUTILS ---
-//moveTo(targetPos, deltaTime) {
-//    const dir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
-//    dir.y = 0; 
-//    dir.normalize();
-//    this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
-//    this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
-//}
+    behaviorBuild(deltaTime) {
+        if (!this.currentFortif) { this.state = 'IDLE'; return; }
 
-moveTo(targetPos, deltaTime) {
-    const dir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
-    
-    // Calculer la distance 3D réelle (avec pentes)
-    const distance3D = dir.length();
-    dir.normalize();
-    
-    // Vérifier la pente avant de monter
-    const slopeAngle = Math.atan2(Math.abs(dir.y), 
-        Math.hypot(dir.x, dir.z)) * (180 / Math.PI);
-    
-    // Si pente trop aigué, limiter la montée
-    if (slopeAngle > this.maxSlopeAngle) {
-        dir.y *= 0.5; // Réduire la montée
-    }
-    
-    dir.normalize(); // Renormaliser après ajustement
-    this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
-    this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
-    
-    // --- DÉTECTION DE BLOCAGE ---
-    const movementDist = new THREE.Vector3(this.mesh.position.x, 0, this.mesh.position.z).distanceTo(new THREE.Vector3(this.lastPos.x, 0, this.lastPos.z));
-    
-    if (movementDist < 0.01) { // Pas vraiment bougé
-        //console.log("j'ai pas avance asser seulement " + movementDist);
-        this.stuckTimer += deltaTime;
-        
-        if (this.stuckTimer > this.stuckThreshold) {
-            // DÉBLOCAGE : pousser de côté OU en avant selon ce qui fonctionne
-            const pushDir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
-            console.log("je suis bloque, je pousse dans la direction " + pushDir.x + " " + pushDir.y + " " + pushDir.z);
-            pushDir.normalize();
-            
-            // Créer une direction perpendiculaire pour sortir du blocage
-            const perpDir = new THREE.Vector3(-pushDir.z, pushDir.y, pushDir.x);
-            
-            // Alterner entre avant et côté pour pousser vraiment
-            const forceDir = (this.stuckTimer % 2) > 1 ? pushDir : perpDir;
-            
-            this.mesh.position.addScaledVector(forceDir, 0.8); // Pousser plus fortement
-            this.stuckTimer = 0; // Réinitialiser le timer
+        const buildPos = this.currentFortif.getBuildPosition(this);
+        const dist2D = new THREE.Vector2(this.mesh.position.x, this.mesh.position.z)
+            .distanceTo(new THREE.Vector2(buildPos.x, buildPos.z));
+
+        if (dist2D > 1.5) {
+            this.moveTo(buildPos, deltaTime); 
+            return;
         }
-    } else {
-        // A bougé normalement
-        this.stuckTimer = 0;
-    }
-    
-    // Actualiser la dernière position
-    this.lastPos.copy(this.mesh.position);
-}
 
-updateHeight(terrainMesh) {
-        // Faire plusieurs raycasts autour du personnage pour éviter les arêtes
-        const raycastRadius = 3.5; //3.5 pour plus de marge
-        const numRays = 2; // Centre + 4 autour 8 pour plus de précision
+        if (!this.currentFortif.isFinished) {
+            this.currentFortif.dig(0.04 * deltaTime);
+        } else {
+            this.currentFortif.removeBuilder(this);
+            // Les ingénieurs ne restent pas forcément défendre, ils vont construire ailleurs
+            if (this.role !== 'ENGINEER' && this.currentFortif.addOccupant(this)) {
+                this.state = 'DEFENDING';
+            } else {
+                this.currentFortif = null;
+                this.state = 'IDLE';
+            }
+        }
+    }
+
+    behaviorDefend(deltaTime) {
+        if (!this.currentFortif || !this.currentFortif.isFinished) {
+            if (this.currentFortif) this.currentFortif.removeOccupant(this);
+            this.currentFortif = null;
+            this.state = 'IDLE';
+            return;
+        }
+
+        const slotPos = this.currentFortif.getSlotPosition(this);
+        const slotType = this.currentFortif.getSlotType(this); // 'COMBAT' ou 'REST'
+
+        const dist2D = new THREE.Vector2(this.mesh.position.x, this.mesh.position.z)
+            .distanceTo(new THREE.Vector2(slotPos.x, slotPos.z));
+        
+        if (dist2D > 1.0) {
+            this.moveTo(slotPos, deltaTime); 
+        } else {
+            // Arrivé à sa place dans la tranchée !
+            if (slotType === 'REST') {
+                // Dans la zone de circulation : on s'accroupit ou on reste inactif pour laisser tirer les copains
+                this.fadeToAction('Idle');
+                const lookDir = (this.team === 0) ? 1 : -1; 
+                this.mesh.lookAt(this.mesh.position.x + lookDir * 10, this.mesh.position.y, this.mesh.position.z);
+            } else {
+                // Dans la zone COMBAT (au créneau) : On tire !
+                if (this.targetEnemy && !this.targetEnemy.isDead) {
+                    this.mesh.lookAt(this.targetEnemy.mesh.position.x, this.mesh.position.y, this.targetEnemy.mesh.position.z);
+                    this.rifle.shoot(this.targetEnemy);
+                } else {
+                    const lookDir = (this.team === 0) ? 1 : -1; 
+                    // On observe l'horizon bien droit
+                    this.mesh.lookAt(this.mesh.position.x + lookDir * 100, this.mesh.position.y, this.mesh.position.z);
+                }
+            }
+        }
+    }
+
+    setDestination(pos) {
+        this.targetPosition = pos.clone();
+    }
+
+    startCharge() {
+        if (this.currentFortif) {
+            this.currentFortif.removeOccupant(this);
+            this.currentFortif.removeBuilder(this);
+            this.currentFortif = null;
+        }
+        this.state = 'CHARGING';
+        this.targetPosition = null;
+        this.speed *= 1.5; 
+    }
+
+    behaviorCharge(deltaTime) {
+        let target = this.unitSystem.getNearestEnemy(this);
+        if (target) {
+            const dist = this.mesh.position.distanceTo(target.mesh.position);
+            if (dist > 2.0) this.moveTo(target.mesh.position, deltaTime);
+            if (dist < 50) this.rifle.shoot(target);
+        } else {
+            const enemyCampX = (this.team === 0) ? 100 : -100;
+            this.moveTo(new THREE.Vector3(enemyCampX, 0, this.mesh.position.z), deltaTime);
+        }
+    }
+
+    moveTo(targetPos, deltaTime) {
+        const dir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
+        dir.normalize();
+        
+        const slopeAngle = Math.atan2(Math.abs(dir.y), Math.hypot(dir.x, dir.z)) * (180 / Math.PI);
+        if (slopeAngle > this.maxSlopeAngle) dir.y *= 0.5; 
+        
+        dir.normalize(); 
+        this.mesh.position.addScaledVector(dir, this.speed * deltaTime);
+        this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
+        
+        const movementDist = new THREE.Vector3(this.mesh.position.x, 0, this.mesh.position.z).distanceTo(new THREE.Vector3(this.lastPos.x, 0, this.lastPos.z));
+        if (movementDist < 0.01) { 
+            this.stuckTimer += deltaTime;
+            if (this.stuckTimer > this.stuckThreshold) {
+                const pushDir = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
+                pushDir.normalize();
+                const perpDir = new THREE.Vector3(-pushDir.z, pushDir.y, pushDir.x);
+                const forceDir = (this.stuckTimer % 2) > 1 ? pushDir : perpDir;
+                
+                this.mesh.position.addScaledVector(forceDir, 0.8);
+                this.stuckTimer = 0; 
+            }
+        } else {
+            this.stuckTimer = 0;
+        }
+        this.lastPos.copy(this.mesh.position);
+    }
+
+    updateHeight(terrainMesh) {
+        const raycastRadius = 3.5; 
+        const numRays = 2; 
         const heights = [];
         
         for (let i = 0; i < numRays; i++) {
             let origin = this.mesh.position.clone();
-            
-            // Premier rayon au centre, puis 4 autour
             if (i > 0) {
                 const angle = (i - 1) * (Math.PI * 2 / 4);
                 origin.x += Math.cos(angle) * raycastRadius;
                 origin.z += Math.sin(angle) * raycastRadius;
             }
-            
             origin.y += 30;
             this.raycaster.set(origin, this.downVector);
             const intersects = this.raycaster.intersectObject(terrainMesh);
-            
-            if (intersects.length > 0) {
-                heights.push(intersects[0].point.y);
-            }
+            if (intersects.length > 0) heights.push(intersects[0].point.y);
         }
         
-        // Prendre la hauteur médiane pour éviter les pics/creux des arêtes
         if (heights.length > 0) {
             heights.sort((a, b) => a - b);
             const medianHeight = heights[Math.floor(heights.length / 2)];
-            // Transition douce pour éviter les sauts
-            this.mesh.position.y += (medianHeight - this.mesh.position.y) * 0.7; //0.8 pour plus de réactivité
+            this.mesh.position.y += (medianHeight - this.mesh.position.y) * 0.7; 
         }
     }
-takeDamage(amount) {
+
+    takeDamage(amount) {
         this.hp -= amount;
         if (this.hp <= 0 && !this.isDead) {
             this.isDead = true;
-            // Animation de mort ? Si tu en as une, joue-la : this.fadeToAction('Die');
-            // Sinon on fait simple :
-            this.fadeToAction('Idle'); // Stop run
+            this.fadeToAction('Idle'); 
             this.mesh.rotation.x = -Math.PI/2; 
             this.mesh.position.y -= 0.2;
             
-            // On peut arrêter le mixer pour figer la pose
-            // this.mixer.stopAllAction();
-            
-            if (this.assignedTrench) this.assignedTrench.removeOccupant(this);
+            if (this.currentFortif) {
+                this.currentFortif.removeOccupant(this);
+                this.currentFortif.removeBuilder(this);
+            }
         }
     }
 }

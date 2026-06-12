@@ -1,135 +1,175 @@
 import * as THREE from 'three';
-import Trench from './Trench.js';
+import Fortification from './Fortification.js';
+
+/**
+ * ConstructionManager — Arbitre de construction
+ *
+ * NE planifie RIEN à l'avance.
+ * Répond aux demandes individuelles des soldats :
+ *   - canIBuild(unit)     → bool  : "est-ce que j'ai le droit de construire ici ?"
+ *   - requestBuild(unit)  → Fortification | null
+ *
+ * Règles d'arbitrage :
+ *   1. Pas déjà une fortif dans un rayon MIN_SPACING autour du soldat
+ *   2. Pas trop de chantiers en cours en même temps (MAX_CONCURRENT)
+ *   3. Ressources disponibles (illimitées pour l'instant, prêt pour extension)
+ */
+
+const MIN_SPACING    = 12;   // Distance mini entre deux fortifs (évite le spam)
+const MAX_CONCURRENT = 8;    // Chantiers actifs simultanés max par équipe
 
 class ConstructionManager {
-    constructor(scene, terrain, team, startX, directionX) {
-        this.scene = scene;
+    constructor(scene, terrain, team) {
+        this.scene   = scene;
         this.terrain = terrain;
-        this.team = team;
-        
-        // startX : Là où commence la base (ex: -80 pour les Bleus)
-        // directionX : Vers où on avance (+1 vers la droite, -1 vers la gauche)
-        this.currentLineX = startX; 
-        this.advanceDir = directionX; 
-        
-        this.blueprints = []; 
-        this.soldiers = [];   
+        this.team    = team;
 
-        // Paramètres de progression
-        this.linesBuilt = 0; // Combien de rangées on a fait
-        this.maxLines = 10;  // Limite pour pas aller à l'infini
-        
-        // On lance la PREMIÈRE ligne tout de suite
-        this.planNextRow();
+        this.fortifications = []; // Toutes les fortifs (finies ou en cours)
+        this.soldiers       = []; // Référence aux soldats de l'équipe
+
+        // Ressources (illimitées pour l'instant)
+        this.resources = Infinity;
     }
+
+    // ─── Enregistrement ───────────────────────────────────────────────────────
 
     registerSoldier(unit) {
         this.soldiers.push(unit);
     }
 
-    // Appelé à chaque frame par UnitSystem pour vérifier l'avancement
-    update() {
-        // On compte combien de structures sont finies dans toute la liste
-        let finishedCount = 0;
-        let totalCount = this.blueprints.length;
+    // ─── API principale : demande de construction ─────────────────────────────
 
-        for (const b of this.blueprints) {
-            if (b.isFinished) finishedCount++;
+    /**
+     * Un soldat demande s'il peut construire à sa position.
+     * Retourne une Fortification (nouveau chantier) ou null (refus).
+     */
+    requestBuild(unit) {
+        const pos = unit.mesh.position;
+        // On empêche de construire SUR une tranchée existante
+        if (this._hasFortifNearby(pos, MIN_SPACING)) return null;
+        // Règle 1 : Trop près d'une fortif existante ?
+        if (this._hasFortifNearby(pos, MIN_SPACING)){
+            console.log("Trop près d'une fortif");
+            return null;
+        }
+        // Règle 2 : Trop de chantiers actifs ?
+        const activeCount = this.fortifications.filter(f => !f.isFinished).length;
+        if (activeCount >= MAX_CONCURRENT){
+            console.log("Trop près d'une fortif");
+            return null;
         }
 
-        // Si 80% des constructions totales sont finies, on lance la suite !
-        // Et on vérifie qu'on n'a pas atteint la limite
-        if (totalCount > 0 && (finishedCount / totalCount) > 0.8) {
-            if (this.linesBuilt < this.maxLines) {
-                this.planNextRow();
-            }
-        }
+        // Règle 3 : Ressources (pour plus tard)
+        if (this.resources <= 0) return null;
+
+        //Autorisé → on crée la fortification à la position du soldat
+        const fortif = new Fortification(this.scene, this.terrain, pos.clone(), this.team);
+        this.fortifications.push(fortif);
+
+        return fortif;
     }
 
-    planNextRow() {
-        console.log(`Équipe ${this.team}: Planification de la ligne #${this.linesBuilt + 1} à X=${this.currentLineX}`);
+
+    // Crée une tranchée à l'extrémité d'une autre pour faire un réseau
+    requestExtension(unit) {
+        const validFortifs = this.fortifications.filter(f => f.isFinished);
         
-        // On construit de Z = -80 à Z = +80
-        // On laisse un peu de marge sur les bords
-        let currentZ = -70; 
-        const endZ = 70;
-
-        while (currentZ < endZ) {
-            // Plus on avance vers le front, plus on fait de tranchées et moins de bunkers
-            // Ligne 0 (Base) = Bunkers
-            // Ligne 5 (Front) = Tranchées
-            const bunkerChance = Math.max(0.1, 0.8 - (this.linesBuilt * 0.1));
-            const type = (Math.random() < bunkerChance) ? 'BUNKER' : 'TRENCH';
+        for (const f of validFortifs) {
+            const endPos = f.endWorld.clone();
             
-            // On ajoute un peu d'aléatoire sur X pour pas faire une ligne trop droite (plus naturel)
-            const randomX = this.currentLineX + (Math.random() * 5 * this.advanceDir);
-
-            const start = new THREE.Vector3(randomX, 0, currentZ);
-            const dir = new THREE.Vector3(0, 0, 1); 
-
-            const structure = new Trench(this.scene, this.terrain, start, dir, type);
-            this.blueprints.push(structure);
-
-            const gap = 3; 
-            currentZ += structure.length + gap;
-        }
-
-        // On prépare la coordonnée X pour la PROCHAINE ligne
-        // On avance de 15 mètres vers l'ennemi
-        this.currentLineX += (15 * this.advanceDir);
-        this.linesBuilt++;
-    }
-
-    assignTask(unitPosition) {
-        let bestTask = null;
-        let maxScore = -Infinity; // On change la logique : on cherche le SCORE MAX
-
-        // Direction du front (+1 ou -1)
-        const frontDir = (this.team === 0) ? 1 : -1;
-
-        for (const structure of this.blueprints) {
+            // Est-ce que cette extrémité est déjà connectée à une autre tranchée ?
+            const isExtended = this.fortifications.some(other => 
+                other !== f && other.startWorld.distanceTo(endPos) < 2.0
+            );
             
-            // Calculer à quel point cette structure est "au front"
-            // Plus X est grand (pour les bleus), plus c'est le front.
-            const forwardScore = structure.startPos.x * frontDir; 
-            const dist = unitPosition.distanceTo(structure.startPos);
+            if (!isExtended) {
+                // Création du Zig-zag : On casse l'angle précédent de 45° (+ ou -)
+                const angleOffset = (Math.random() > 0.5 ? 1 : -1) * (Math.PI / 4);
+                const newAngle = f.angle + angleOffset;
 
-            // --- SCORE DE TACHE ---
-            let score = 0;
-
-            // 1. TACHE DE CONSTRUCTION (Priorité ABSOLUE)
-            if (structure.needsBuilders()) {
-                // Base : 10 000 points (Immense bonus)
-                // + Bonus de Front : On préfère construire devant (x10)
-                // - Malus de Distance : On préfère ce qui est près (mais le bonus 10k écrase tout)
-                score = 10000 + (forwardScore * 5) - (dist * 0.5);
-                
-                if (score > maxScore) {
-                    maxScore = score;
-                    bestTask = { type: 'BUILD', target: structure };
-                }
-            }
-            
-            // 2. TACHE DE DEFENSE (Seulement si on a rien de mieux à faire)
-            else if (structure.isFinished && !structure.isFull()) {
-                // Base : 100 points
-                // On veut défendre le plus en avant possible absolument
-                score = 100 + (forwardScore * 10) - dist;
-
-                if (score > maxScore) {
-                    maxScore = score;
-                    bestTask = { type: 'DEFEND', target: structure };
-                }
+                const fortif = new Fortification(this.scene, this.terrain, endPos, this.team, newAngle);
+                this.fortifications.push(fortif);
+                return fortif;
             }
         }
-
-        return bestTask;
+        return null;
     }
+
+   // Trouve un chantier inachevé pour aller aider
+    findActiveChantier() {
+        for (const f of this.fortifications) {
+            // CORRECTION: on vérifie s'il y a besoin de constructeurs !
+            if (!f.isFinished && f.needsBuilders()) return f;
+        }
+        return null;
+    }
+
+    /**
+     * Vérifie rapidement si un soldat PEUT potentiellement demander à construire
+     * (utilisé par Unit.js avant de changer d'état pour éviter des appels inutiles)
+     */
+    canIBuild(unit) {
+        const pos = unit.mesh.position;
+        if (this._hasFortifNearby(pos, MIN_SPACING)) return false;
+        const activeCount = this.fortifications.filter(f => !f.isFinished).length;
+        if (activeCount >= MAX_CONCURRENT) return false;
+        return true;
+    }
+
+    isFull() {
+        return this.occupants.length >= this.occupancyMax;
+    }
+
+    // ─── Recherche de fortif disponible (pour se planquer) ────────────────────
+    /**
+     * Retourne la fortification terminée la plus proche avec de la place,
+     * dans un rayon donné. Utilisé par Unit.js pour trouver où se défendre.
+     */
+    findCoverNearby(pos, radius = 20) {
+        let best     = null;
+        let bestDist = Infinity;
+
+        for (const f of this.fortifications) {
+            if (!f.isFinished) continue;
+            if (f.isFull())    continue;
+
+            const dist = pos.distanceTo(f.mesh.position);
+            if (dist < radius && dist < bestDist) {
+                bestDist = dist;
+                best     = f;
+            }
+        }
+        return best;
+    }
+    // ─── Charge globale ───────────────────────────────────────────────────────
 
     orderGlobalCharge() {
-        console.log(`CHARGE !!!`);
+        console.log(`[Team ${this.team}] CHARGE !`);
         this.soldiers.forEach(s => !s.isDead && s.startCharge());
-        this.blueprints.forEach(b => { b.occupants = []; b.builders = []; });
+        // Vide les occupants de toutes les fortifs
+        this.fortifications.forEach(f => {
+            f.occupants = [];
+            f.builders  = [];
+        });
+    }
+
+    // ─── Update ───────────────────────────────────────────────────────────────
+
+    update(deltaTime) {
+        // On update chaque fortification (progression du chantier, etc.)
+        this.fortifications.forEach(f => f.update(deltaTime));
+    }
+
+    // ─── Privé ────────────────────────────────────────────────────────────────
+
+    _hasFortifNearby(pos, radius) {
+        for (const f of this.fortifications) {
+            // On vérifie le départ, le centre ET la fin pour être sûr de ne pas se croiser bêtement
+            if (pos.distanceTo(f.startWorld) < radius || pos.distanceTo(f.position) < radius || pos.distanceTo(f.endWorld) < radius) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
