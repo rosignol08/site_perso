@@ -27,7 +27,7 @@ const floatingElements = Array.from(buttons).map(el => {
         lastMouseY: 0
     };
 
-    // --- GESTION DU TIMER 0.2s ---
+    // --- GESTION DU TIMER 0.1s ---
     el.addEventListener('mouseenter', () => {
         // On lance le compte à rebours
         item.hoverTimeout = setTimeout(() => {
@@ -41,7 +41,7 @@ const floatingElements = Array.from(buttons).map(el => {
             // STOP !
             item.vx = 0;
             item.vy = 0;
-        }, 200); // 200ms = 0.2 secondes
+        }, 100); // 100ms = 0.1 secondes
     });
 
     el.addEventListener('mouseleave', () => {
