@@ -1,5 +1,5 @@
 const API_URL = "https://robot.romaric.nl"; // L'URL du serveur
-const MODEL3 = "gemma4:12b";
+const MODEL3 = "gemma4:26b";
 const MODEL2 = "gemma4:e4b";
 const MODEL = "gemma4:e2b"//"dolphin-phi:latest"; //gemma3:1b
 const messagesBox = document.getElementById('messages-box');
