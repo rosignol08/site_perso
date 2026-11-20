@@ -2,19 +2,42 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#343541" media="(prefers-color-scheme: dark)">
     <title>YafoyeGPT</title>
-    <link rel="stylesheet" href="style_chat.css?v=2.0.3"> <!-- augmenter la valeur à chaque update-->
+    <link rel="stylesheet" href="style_chat.css?v=2.0.4"> <!-- augmenter la valeur à chaque update-->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div id="chat-container">
         
+        <!-- Barre de titre avec gestion des conversations -->
+        <div id="chat-header">
+            <div id="header-controls">
+                <button id="conversations-btn" onclick="toggleConversations()">💬 Conversations</button>
+                <button id="model-toggle" class="model-toggle-btn">Modèle: gemma4:e2b</button>
+                <button id="expert-toggle" class="model-toggle-btn expert-btn" title="Activer Qwen3.8 27B Turbo (Serveur Linux)">🚀 Expert</button>
+            </div>
+            <span id="current-conversation-title">Nouvelle conversation</span>
+        </div>
+        
+        <!-- Liste des conversations (cachée par défaut) -->
+        <div id="conversations-panel" class="hidden">
+            <div class="conversations-header">
+                <h3>Mes conversations</h3>
+                <button onclick="createNewConversation()" class="new-conversation-btn">+ Nouvelle</button>
+            </div>
+            <div id="conversations-list"></div>
+        </div>
+        
         <div id="messages-box">
             <div class="message ai-message">
                 <div class="message-content">
                     <div class="avatar">Y</div>
-                    <div class="text">Salut princesse, pose-moi ta question.</div>
+                    <div class="text">Bonjour, comment puis-je vous aider ?</div>
                 </div>
             </div>
         </div>
@@ -22,19 +45,13 @@
         <div id="input-area">
             <div class="input-wrapper">
                 <input type="text" id="user-input" placeholder="Envoyer un message..." autocomplete="off">
-                <button id="send-button" onclick="sendMessage()" title="Envoyer le message" aria-label="Envoyer le message"></button>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                </button>
-                <button id="model-toggle" class="model-toggle-btn">Modèle: gemma3:1b</button>
+                <button id="send-button" onclick="sendMessage()" title="Envoyer le message" aria-label="Envoyer le message">Envoyer</button>
             </div>
             <p id="status-message"></p>
         </div>
     </div>
 
-    <script src="script_chat.js?v=2.0.3"></script>
+    <script src="script_chat.js?v=2.0.4"></script>
 </body>
 </html>
 

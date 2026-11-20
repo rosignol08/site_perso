@@ -1,0 +1,67 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "llamacpp/qwen3.8-27b-turbo",
+  "provider": {
+    "llamacpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama.cpp (serveur local)",
+      "options": {
+        "baseURL": "http://192.168.1.91:8080/v1",
+        "apiKey": "not-needed"
+      },
+      "models": {
+        "qwen3.8-27b-turbo": {
+          "name": "Qwen3.8 27B Turbo (Serveur Linux)",
+          "attachment": false,
+          "modalities": { "input": ["text"], "output": ["text"] },
+          "limit": { "context": 50000, "output": 10240 }
+        }
+      }
+    },
+    "ollama_local": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (Local Direct)",
+      "options": {
+        "baseURL": "http://192.168.1.91:11434/v1",
+        "apiKey": "not-needed"
+      },
+      "models": {
+        "gemma4:26b": {
+          "name": "Gemma 4 (26B)",
+          "attachment": true,
+          "modalities": { "input": ["text", "image"], "output": ["text"] }
+        },
+        "qwen3.5:9b": {
+          "name": "Qwen 3.5 (9B)",
+          "attachment": false,
+          "modalities": { "input": ["text"], "output": ["text"] }
+        },
+        "qwen2.5-coder-100k:latest": {
+          "name": "Qwen 2.5 Coder 100k (Local)",
+          "attachment": false,
+          "modalities": { "input": ["text"], "output": ["text"] }
+        }
+      }
+    }
+  },
+  "mcp": {
+    "mcpbridge": {
+      "type": "local",
+      "command": [
+        "node",
+        "E:\\téléchargement hdd\\MCPBridge-main\\mcp-server\\index.js"
+      ],
+      "enabled": true
+    },
+    "Roblox_Studio": {
+      "type": "local",
+      "command": [
+        "cmd.exe",
+        "/c",
+        "cd /d %LOCALAPPDATA%\\Roblox && .\\mcp.bat"
+      ],
+      "enabled": true
+    }
+  },
+  "shell": "powershell"
+}
